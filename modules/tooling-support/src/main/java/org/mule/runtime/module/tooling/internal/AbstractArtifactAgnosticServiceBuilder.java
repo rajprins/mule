@@ -15,7 +15,6 @@ import static org.mule.runtime.module.deployment.impl.internal.maven.MavenUtils.
 import static org.mule.runtime.module.deployment.impl.internal.maven.MavenUtils.createDeployablePomFile;
 import static org.mule.runtime.module.deployment.impl.internal.maven.MavenUtils.updateArtifactPom;
 import org.mule.maven.client.api.MavenClientProvider;
-import org.mule.runtime.api.connectivity.ConnectivityTestingService;
 import org.mule.runtime.app.declaration.api.ArtifactDeclaration;
 import org.mule.runtime.core.api.config.bootstrap.ArtifactType;
 import org.mule.runtime.core.api.util.UUID;
@@ -23,7 +22,7 @@ import org.mule.runtime.deployment.model.api.application.ApplicationDescriptor;
 import org.mule.runtime.globalconfig.api.GlobalConfigLoader;
 import org.mule.runtime.module.deployment.impl.internal.application.DefaultApplicationFactory;
 import org.mule.runtime.module.deployment.impl.internal.application.DeployableMavenClassLoaderModelLoader;
-import org.mule.runtime.module.tooling.api.connectivity.ConnectivityTestingServiceBuilder;
+import org.mule.runtime.module.tooling.api.ArtifactAgnosticServiceBuilder;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -31,18 +30,13 @@ import java.util.ArrayList;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
 
-/**
- * Default implementation for {@code ConnectivityTestingServiceBuilder}.
- *
- * @since 4.0
- */
-class DefaultConnectivityTestingServiceBuilder implements ConnectivityTestingServiceBuilder {
+public abstract class AbstractArtifactAgnosticServiceBuilder<T extends ArtifactAgnosticServiceBuilder, S>
+    implements ArtifactAgnosticServiceBuilder<T, S> {
 
   private final DefaultApplicationFactory defaultApplicationFactory;
-  private ArtifactDeclaration artifactDeclaration;
   private Model model;
 
-  DefaultConnectivityTestingServiceBuilder(DefaultApplicationFactory defaultApplicationFactory) {
+  protected AbstractArtifactAgnosticServiceBuilder(DefaultApplicationFactory defaultApplicationFactory) {
     this.defaultApplicationFactory = defaultApplicationFactory;
     createTempMavenModel();
   }
@@ -51,8 +45,8 @@ class DefaultConnectivityTestingServiceBuilder implements ConnectivityTestingSer
    * {@inheritDoc}
    */
   @Override
-  public ConnectivityTestingServiceBuilder addDependency(String groupId, String artifactId, String artifactVersion,
-                                                         String classifier, String type) {
+  public T addDependency(String groupId, String artifactId, String artifactVersion,
+                         String classifier, String type) {
     Dependency dependency = new Dependency();
     dependency.setGroupId(groupId);
     dependency.setArtifactId(artifactId);
@@ -63,8 +57,37 @@ class DefaultConnectivityTestingServiceBuilder implements ConnectivityTestingSer
       addSharedLibraryDependency(model, dependency);
     }
     model.getDependencies().add(dependency);
-    return this;
+    return getThis();
   }
+
+  @Override
+  public S build() {
+    final ArtifactDeclaration artifactDeclaration = getArtifactDeclaration();
+    checkState(artifactDeclaration != null, "artifact configuration cannot be null");
+    return createService(() -> {
+      String applicationName = UUID.getUUID() + "-connectivity-testing-temp-app";
+      File applicationFolder = new File(getExecutionFolder(), applicationName);
+      ApplicationDescriptor applicationDescriptor = new ApplicationDescriptor(applicationName);
+      applicationDescriptor.setArtifactDeclaration(artifactDeclaration);
+      applicationDescriptor.setConfigResources(emptySet());
+      applicationDescriptor.setArtifactLocation(applicationFolder);
+      createDeployablePomFile(applicationFolder, model);
+      updateArtifactPom(applicationFolder, model);
+      MavenClientProvider mavenClientProvider =
+          MavenClientProvider.discoverProvider(AbstractArtifactAgnosticServiceBuilder.class.getClassLoader());
+      applicationDescriptor
+          .setClassLoaderModel(new DeployableMavenClassLoaderModelLoader(mavenClientProvider
+              .createMavenClient(GlobalConfigLoader.getMavenConfig()))
+                  .load(applicationFolder, emptyMap(), ArtifactType.APP));
+      return defaultApplicationFactory.createArtifact(applicationDescriptor);
+    });
+  }
+
+  //Template method to get build artifact declaration
+  protected abstract ArtifactDeclaration getArtifactDeclaration();
+
+  protected abstract S createService(ApplicationSupplier applicationSupplier);
+
 
   private void createTempMavenModel() {
     model = new Model();
@@ -75,37 +98,8 @@ class DefaultConnectivityTestingServiceBuilder implements ConnectivityTestingSer
     model.setModelVersion("4.0.0");
   }
 
-  /**
-   * {@inheritDoc}
-   */
-  public ConnectivityTestingServiceBuilder setArtifactDeclaration(ArtifactDeclaration artifactDeclaration) {
-    this.artifactDeclaration = artifactDeclaration;
-    return this;
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public ConnectivityTestingService build() {
-    checkState(artifactDeclaration != null, "artifact configuration cannot be null");
-    return new TemporaryArtifactConnectivityTestingService(() -> {
-      String applicationName = UUID.getUUID() + "-connectivity-testing-temp-app";
-      File applicationFolder = new File(getExecutionFolder(), applicationName);
-      ApplicationDescriptor applicationDescriptor = new ApplicationDescriptor(applicationName);
-      applicationDescriptor.setArtifactDeclaration(artifactDeclaration);
-      applicationDescriptor.setConfigResources(emptySet());
-      applicationDescriptor.setArtifactLocation(applicationFolder);
-      createDeployablePomFile(applicationFolder, model);
-      updateArtifactPom(applicationFolder, model);
-      MavenClientProvider mavenClientProvider =
-          MavenClientProvider.discoverProvider(DefaultConnectivityTestingServiceBuilder.class.getClassLoader());
-      applicationDescriptor
-          .setClassLoaderModel(new DeployableMavenClassLoaderModelLoader(mavenClientProvider
-              .createMavenClient(GlobalConfigLoader.getMavenConfig()))
-                  .load(applicationFolder, emptyMap(), ArtifactType.APP));
-      return defaultApplicationFactory.createArtifact(applicationDescriptor);
-    });
+  private T getThis() {
+    return (T) this;
   }
 
 }
