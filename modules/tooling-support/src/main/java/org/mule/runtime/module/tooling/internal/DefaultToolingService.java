@@ -44,6 +44,7 @@ import org.mule.runtime.module.deployment.impl.internal.domain.DomainNotFoundExc
 import org.mule.runtime.module.deployment.impl.internal.domain.DomainRepository;
 import org.mule.runtime.module.tooling.api.ToolingService;
 import org.mule.runtime.module.tooling.api.connectivity.ConnectivityTestingServiceBuilder;
+import org.mule.runtime.module.tooling.internal.connectivity.DefaultConnectivityTestingServiceBuilder;
 
 import java.io.File;
 import java.io.IOException;
