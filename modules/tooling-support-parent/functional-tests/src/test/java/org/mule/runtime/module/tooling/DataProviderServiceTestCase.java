@@ -10,18 +10,21 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
-import static org.mule.runtime.app.declaration.api.fluent.ElementDeclarer.newParameterGroup;
 import static org.mule.test.infrastructure.maven.MavenTestUtils.getMavenLocalRepository;
 import org.mule.runtime.api.component.location.Location;
 import org.mule.runtime.api.connection.ConnectionValidationResult;
 import org.mule.runtime.api.connectivity.ConnectivityTestingService;
-import org.mule.runtime.api.metadata.DataProviderService;
-import org.mule.runtime.api.value.ValueResult;
+import org.mule.runtime.api.value.Value;
+import org.mule.runtime.module.tooling.api.data.DataProviderService;
 import org.mule.runtime.app.declaration.api.ArtifactDeclaration;
 import org.mule.runtime.module.tooling.api.ArtifactAgnosticServiceBuilder;
 import org.mule.runtime.module.tooling.api.ToolingService;
+import org.mule.runtime.module.tooling.api.data.DataResult;
 import org.mule.tck.junit4.rule.SystemProperty;
 import org.mule.test.infrastructure.deployment.AbstractFakeMuleServerTestCase;
+
+import java.util.Map;
+import java.util.Set;
 
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -69,17 +72,27 @@ public class DataProviderServiceTestCase extends AbstractFakeMuleServerTestCase 
   }
 
   @Test
+  public void discoverAllValues() {
+    DataProviderService dataProviderService =
+        addDependency(toolingService.newDataProviderServiceBuilder())
+            .setArtifactDeclaration(buildArtifactDeclaration())
+            .build();
+    DataResult<Map<String, Set<Value>>> valueResult = dataProviderService.discover();
+    assertThat(valueResult.isSuccessful(), is(true));
+  }
+
+  @Test
   public void configLessConnectionLessValueProviderOnOperation() {
     DataProviderService dataProviderService =
         addDependency(toolingService.newDataProviderServiceBuilder())
             .setArtifactDeclaration(buildArtifactDeclaration())
             .build();
 
-    ValueResult valueResult = dataProviderService.getValues(configLessConnectionLessVPOPDeclaration(CONFIG_NAME),
-                                                            PROVIDED_PARAMETER_NAME);
-    assertThat(valueResult.isSuccess(), equalTo(true));
-    assertThat(valueResult.getValues(), hasSize(1));
-    assertThat(valueResult.getValues().iterator().next().getId(), is("ConfigLessConnectionLessNoActingParameter"));
+    DataResult<Set<Value>> valueResult = dataProviderService.getValues(configLessConnectionLessVPOPDeclaration(CONFIG_NAME),
+                                                                       PROVIDED_PARAMETER_NAME);
+    assertThat(valueResult.isSuccessful(), equalTo(true));
+    assertThat(valueResult.getData(), hasSize(1));
+    assertThat(valueResult.getData().iterator().next().getId(), is("ConfigLessConnectionLessNoActingParameter"));
   }
 
   @Test
@@ -89,11 +102,11 @@ public class DataProviderServiceTestCase extends AbstractFakeMuleServerTestCase 
             .setArtifactDeclaration(buildArtifactDeclaration())
             .build();
 
-    ValueResult valueResult = dataProviderService.getValues(configLessVPOPDeclaration(CONFIG_NAME),
-                                                            PROVIDED_PARAMETER_NAME);
-    assertThat(valueResult.isSuccess(), equalTo(true));
-    assertThat(valueResult.getValues(), hasSize(1));
-    assertThat(valueResult.getValues().iterator().next().getId(), is(CLIENT_NAME));
+    DataResult<Set<Value>> valueResult = dataProviderService.getValues(configLessVPOPDeclaration(CONFIG_NAME),
+                                                                       PROVIDED_PARAMETER_NAME);
+    assertThat(valueResult.isSuccessful(), equalTo(true));
+    assertThat(valueResult.getData(), hasSize(1));
+    assertThat(valueResult.getData().iterator().next().getId(), is(CLIENT_NAME));
   }
 
   @Test
@@ -105,11 +118,12 @@ public class DataProviderServiceTestCase extends AbstractFakeMuleServerTestCase 
 
     final String actingParameter = "actingParameter";
 
-    ValueResult valueResult = dataProviderService.getValues(actingParameterVPOPDeclaration(CONFIG_NAME, actingParameter),
-                                                            PROVIDED_PARAMETER_NAME);
-    assertThat(valueResult.isSuccess(), equalTo(true));
-    assertThat(valueResult.getValues(), hasSize(1));
-    assertThat(valueResult.getValues().iterator().next().getId(), is(actingParameter));
+    DataResult<Set<Value>> valueResult =
+        dataProviderService.getValues(actingParameterVPOPDeclaration(CONFIG_NAME, actingParameter),
+                                      PROVIDED_PARAMETER_NAME);
+    assertThat(valueResult.isSuccessful(), equalTo(true));
+    assertThat(valueResult.getData(), hasSize(1));
+    assertThat(valueResult.getData().iterator().next().getId(), is(actingParameter));
   }
 
   private <T extends ArtifactAgnosticServiceBuilder<T, ?>> T addDependency(T serviceBuilder) {
