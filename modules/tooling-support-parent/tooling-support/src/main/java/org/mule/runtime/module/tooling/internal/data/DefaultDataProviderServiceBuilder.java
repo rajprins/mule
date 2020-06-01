@@ -6,13 +6,7 @@
  */
 package org.mule.runtime.module.tooling.internal.data;
 
-import static org.mule.runtime.app.declaration.api.fluent.ElementDeclarer.newArtifact;
-import org.mule.runtime.api.metadata.DataProviderService;
-import org.mule.runtime.app.declaration.api.ArtifactDeclaration;
-import org.mule.runtime.app.declaration.api.ConfigurationElementDeclaration;
-import org.mule.runtime.app.declaration.api.ConnectionElementDeclaration;
-import org.mule.runtime.app.declaration.api.fluent.ArtifactDeclarer;
-import org.mule.runtime.app.declaration.api.fluent.ElementDeclarer;
+import org.mule.runtime.module.tooling.api.data.DataProviderService;
 import org.mule.runtime.module.deployment.impl.internal.application.DefaultApplicationFactory;
 import org.mule.runtime.module.tooling.api.data.DataProviderServiceBuilder;
 import org.mule.runtime.module.tooling.internal.AbstractArtifactAgnosticServiceBuilder;
