@@ -6,8 +6,10 @@
  */
 package org.mule.runtime.module.tooling.api.data;
 
-import org.mule.runtime.module.tooling.api.ArtifactAgnosticServiceBuilder;
+public interface DataResult<T> {
 
-public interface DataProviderServiceBuilder
-    extends ArtifactAgnosticServiceBuilder<DataProviderServiceBuilder, DataProviderService> {
+  T getData();
+
+  boolean isSuccessful();
+
 }
