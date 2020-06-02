@@ -7,17 +7,12 @@
 package org.mule.runtime.module.tooling.api.data;
 
 import org.mule.runtime.api.value.ResolvingFailure;
-import org.mule.runtime.api.value.Value;
 
 import java.util.Optional;
-import java.util.Set;
 
-//TODO: Discuss this interface
-public interface DataResult {
+public interface DataProviderResult<T> {
 
-  String getResolverName();
-
-  Set<Value> getData();
+  T getResult();
 
   Optional<ResolvingFailure> getFailure();
 

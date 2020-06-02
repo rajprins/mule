@@ -7,20 +7,20 @@
 package org.mule.runtime.module.tooling.internal.data;
 
 import static org.mule.runtime.api.i18n.I18nMessageFactory.createStaticMessage;
-import static org.mule.runtime.module.tooling.internal.data.DefaultDataResult.failure;
+import static org.mule.runtime.api.value.ResolvingFailure.Builder.newFailure;
+import static org.mule.runtime.module.tooling.internal.data.DefaultDataProviderResult.failure;
 import org.mule.runtime.api.exception.MuleException;
 import org.mule.runtime.api.exception.MuleRuntimeException;
 import org.mule.runtime.core.api.MuleContext;
+import org.mule.runtime.module.tooling.api.data.DataProviderResult;
 import org.mule.runtime.module.tooling.api.data.DataProviderService;
-import org.mule.runtime.api.value.Value;
 import org.mule.runtime.app.declaration.api.ComponentElementDeclaration;
 import org.mule.runtime.deployment.model.api.application.Application;
 import org.mule.runtime.module.tooling.api.data.DataResult;
 import org.mule.runtime.module.tooling.internal.AbstractArtifactAgnosticService;
 import org.mule.runtime.module.tooling.internal.ApplicationSupplier;
 
-import java.util.Map;
-import java.util.Set;
+import java.util.List;
 
 
 public class TemporaryArtifactDataProviderService extends AbstractArtifactAgnosticService implements DataProviderService {
@@ -45,17 +45,17 @@ public class TemporaryArtifactDataProviderService extends AbstractArtifactAgnost
   }
 
   @Override
-  public DataResult<Map<String, Set<Value>>> discover() {
+  public DataProviderResult<List<DataResult>> discover() {
     return withTemporaryApplication(
                                     app -> withServiceFrom(app).discover(),
-                                    err -> failure());
+                                    err -> failure(newFailure(err).build()));
   }
 
   @Override
-  public DataResult<Set<Value>> getValues(ComponentElementDeclaration component, String parameterName) {
+  public DataProviderResult<DataResult> getValues(ComponentElementDeclaration component, String parameterName) {
     return withTemporaryApplication(
                                     app -> withServiceFrom(app).getValues(component, parameterName),
-                                    err -> failure());
+                                    err -> failure(newFailure(err).build()));
   }
 
 

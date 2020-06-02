@@ -6,34 +6,48 @@
  */
 package org.mule.runtime.module.tooling.internal.data;
 
+import static java.util.Collections.emptySet;
+import static java.util.Optional.ofNullable;
+import org.mule.runtime.api.value.ResolvingFailure;
+import org.mule.runtime.api.value.Value;
 import org.mule.runtime.module.tooling.api.data.DataResult;
 
-public class DefaultDataResult<T> implements DataResult<T> {
+import java.util.Optional;
+import java.util.Set;
 
-  private T data;
-  private boolean isSuccessful = true;
+public class DefaultDataResult implements DataResult {
 
-  private DefaultDataResult(T data) {
+  private final String resolverName;
+  private final Set<Value> data;
+  private final ResolvingFailure resolvingFailure;
+
+  public DefaultDataResult(String elementName,
+                           Set<Value> data) {
+    this.resolverName = elementName;
     this.data = data;
+    this.resolvingFailure = null;
   }
 
-  public static <T> DefaultDataResult<T> success(T data) {
-    return new DefaultDataResult<>(data);
-  }
-
-  public static <T> DefaultDataResult<T> failure() {
-    DefaultDataResult<T> dr = new DefaultDataResult<>(null);
-    dr.isSuccessful = false;
-    return dr;
+  public DefaultDataResult(String elementName,
+                           ResolvingFailure resolvingFailure) {
+    this.resolverName = elementName;
+    this.resolvingFailure = resolvingFailure;
+    this.data = emptySet();
   }
 
   @Override
-  public T getData() {
+  public String getResolverName() {
+    return this.resolverName;
+  }
+
+  @Override
+  public Set<Value> getData() {
     return this.data;
   }
 
   @Override
-  public boolean isSuccessful() {
-    return this.isSuccessful;
+  public Optional<ResolvingFailure> getFailure() {
+    return ofNullable(resolvingFailure);
   }
+
 }
