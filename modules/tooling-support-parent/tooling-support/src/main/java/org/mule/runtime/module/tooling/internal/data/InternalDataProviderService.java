@@ -6,10 +6,14 @@
  */
 package org.mule.runtime.module.tooling.internal.data;
 
+import static java.util.Collections.emptyList;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.emptySet;
 import static java.util.Optional.ofNullable;
-import static org.mule.runtime.module.tooling.internal.data.DefaultDataResult.success;
+import static java.util.stream.Collectors.toList;
+import static org.mule.runtime.api.i18n.I18nMessageFactory.createStaticMessage;
+import static org.mule.runtime.api.value.ResolvingFailure.Builder.newFailure;
+import static org.mule.runtime.module.tooling.internal.data.DefaultDataProviderResult.success;
 import org.mule.runtime.api.component.location.ConfigurationComponentLocator;
 import org.mule.runtime.api.component.location.Location;
 import org.mule.runtime.api.connection.ConnectionProvider;
@@ -21,12 +25,13 @@ import org.mule.runtime.api.meta.model.ExtensionModel;
 import org.mule.runtime.api.meta.model.config.ConfigurationModel;
 import org.mule.runtime.api.meta.model.operation.HasOperationModels;
 import org.mule.runtime.api.meta.model.operation.OperationModel;
+import org.mule.runtime.api.meta.model.parameter.ParameterModel;
 import org.mule.runtime.api.meta.model.parameter.ParameterizedModel;
+import org.mule.runtime.api.meta.model.parameter.ValueProviderModel;
 import org.mule.runtime.api.meta.model.source.HasSourceModels;
 import org.mule.runtime.api.meta.model.source.SourceModel;
 import org.mule.runtime.api.meta.model.util.ExtensionWalker;
 import org.mule.runtime.api.util.Reference;
-import org.mule.runtime.api.value.Value;
 import org.mule.runtime.app.declaration.api.ArtifactDeclaration;
 import org.mule.runtime.app.declaration.api.ComponentElementDeclaration;
 import org.mule.runtime.app.declaration.api.ConfigurationElementDeclaration;
@@ -35,22 +40,26 @@ import org.mule.runtime.app.declaration.api.ParameterValueVisitor;
 import org.mule.runtime.app.declaration.api.fluent.ParameterSimpleValue;
 import org.mule.runtime.core.api.MuleContext;
 import org.mule.runtime.core.api.extension.ExtensionManager;
+import org.mule.runtime.core.api.util.func.CheckedSupplier;
 import org.mule.runtime.extension.api.runtime.config.ConfigurationProvider;
 import org.mule.runtime.extension.api.values.ValueResolvingException;
+import org.mule.runtime.module.extension.internal.loader.java.property.ValueProviderFactoryModelProperty;
 import org.mule.runtime.module.extension.internal.runtime.resolver.ConnectionProviderResolver;
 import org.mule.runtime.module.extension.internal.runtime.resolver.ParameterValueResolver;
 import org.mule.runtime.module.extension.internal.runtime.resolver.StaticValueResolver;
 import org.mule.runtime.module.extension.internal.runtime.resolver.ValueResolver;
 import org.mule.runtime.module.extension.internal.util.ReflectionCache;
 import org.mule.runtime.module.extension.internal.value.ValueProviderMediator;
+import org.mule.runtime.module.tooling.api.data.DataProviderResult;
 import org.mule.runtime.module.tooling.api.data.DataProviderService;
 import org.mule.runtime.module.tooling.api.data.DataResult;
 
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Supplier;
 
 import javax.inject.Inject;
@@ -76,63 +85,63 @@ public class InternalDataProviderService implements DataProviderService {
   }
 
   @Override
-  public DataResult<Map<String, Set<Value>>> discover() {
-    return configurationModel()
+  public DataProviderResult<List<DataResult>> discover() {
+    return success(configurationModel()
         .map(this::discoverValuesFromConfigModel)
-        .map(DefaultDataResult::success)
-        .orElse(success(emptyMap()));
+        .orElse(emptyList()));
   }
 
   @Override
-  public DataResult<Set<Value>> getValues(ComponentElementDeclaration component, String parameterName) {
-    return extensionManager.getExtension(component.getDeclaringExtension())
-        .flatMap(em -> getComponentModel(em, component.getName()).map(this::createValueProviderMediator))
-        .map(
-             vpm -> {
-               try {
-                 return vpm.getValues(parameterName,
-                                      parameterValueResolver(component),
-                                      connectionSupplier(),
-                                      () -> null);
-               } catch (ValueResolvingException e) {
-                 throw new MuleRuntimeException(e);
-               }
-             })
-        .map(DefaultDataResult::success)
-        .orElse(success(emptySet()));
+  public DataProviderResult<DataResult> getValues(ComponentElementDeclaration component, String parameterName) {
+    return success(
+                   extensionManager.getExtension(component.getDeclaringExtension())
+                       .flatMap(em -> getComponentModel(em, component.getName()))
+                       .map(cm -> getValues(cm, parameterName, parameterValueResolver(component)))
+                       .orElse(new DefaultDataResult(parameterName, emptySet())));
   }
 
-  private Map<String, Set<Value>> discoverValuesFromConfigModel(ConfigurationModel configurationModel) {
-    final Map<String, Set<Value>> values = new HashMap<>();
-    configurationModel.getOperationModels().stream().map(this::getValuesForModel).forEach(values::putAll);
-    configurationModel.getSourceModels().stream().map(this::getValuesForModel).forEach(values::putAll);
-    return values;
+  private <T extends ParameterizedModel & EnrichableModel> DataResult getValues(T componentModel,
+                                                                                String parameterName,
+                                                                                ParameterValueResolver parameterValueResolver) {
+    ValueProviderMediator<T> valueProviderMediator = createValueProviderMediator(componentModel);
+    try {
+      return new DefaultDataResult(getResolverName(componentModel, parameterName),
+                                   valueProviderMediator.getValues(parameterName,
+                                                                   parameterValueResolver,
+                                                                   connectionSupplier(),
+                                                                   () -> null));
+    } catch (ValueResolvingException e) {
+      return new DefaultDataResult(getResolverName(componentModel, parameterName),
+                                   newFailure(e).build());
+    }
   }
 
-  private <T extends ParameterizedModel & EnrichableModel> Map<String, Set<Value>> getValuesForModel(T model) {
-    final ValueProviderMediator<T> valueProviderMediator = createValueProviderMediator(model);
-    Supplier<Object> connectionSupplier = connectionSupplier();
-    Supplier<Object> configSupplier = () -> null;
-    Map<String, Set<Value>> values = new HashMap<>();
-    model.getAllParameterModels()
+  private String getResolverName(ParameterizedModel componentModel, String parameterName) {
+    return componentModel
+        .getAllParameterModels()
+        .stream()
+        .filter(pm -> Objects.equals(pm.getName(), parameterName)
+            && pm.getModelProperty(ValueProviderFactoryModelProperty.class).isPresent())
+        .findAny()
+        .flatMap(pm -> pm.getModelProperty(ValueProviderFactoryModelProperty.class))
+        .map(mp -> mp.getValueProvider().getSimpleName())
+        .orElseThrow(() -> new MuleRuntimeException(createStaticMessage("Could not find parameter with name: %s",
+                                                                        parameterName)));
+  }
+
+  private List<DataResult> discoverValuesFromConfigModel(ConfigurationModel configurationModel) {
+    final List<DataResult> results = new LinkedList<>();
+    configurationModel.getOperationModels().stream().map(this::getValuesForModel).forEach(results::addAll);
+    configurationModel.getSourceModels().stream().map(this::getValuesForModel).forEach(results::addAll);
+    return results;
+  }
+
+  private <T extends ParameterizedModel & EnrichableModel> List<DataResult> getValuesForModel(T model) {
+    return model.getAllParameterModels()
         .stream()
         .filter(pm -> pm.getValueProviderModel().isPresent())
-        .forEach(
-                 vpp -> {
-                   try {
-                     Set<Value> valueResult =
-                         valueProviderMediator
-                             .getValues(vpp.getName(),
-                                        null,
-                                        connectionSupplier,
-                                        configSupplier);
-                     values.put(vpp.getName(),
-                                valueResult);
-                   } catch (ValueResolvingException e) {
-                     //throw new MuleRuntimeException(e);
-                   }
-                 });
-    return values;
+        .map(vpp -> getValues(model, vpp.getName(), null))
+        .collect(toList());
   }
 
   private <T extends ParameterizedModel & EnrichableModel> ValueProviderMediator<T> createValueProviderMediator(T constructModel) {
@@ -238,15 +247,21 @@ public class InternalDataProviderService implements DataProviderService {
         .flatMap(conloc -> componentLocator.find(conloc))
         .filter(c -> c instanceof ConnectionProviderResolver)
         .map(cpr -> (ConnectionProviderResolver) cpr)
-        .map(cpr -> (Supplier<Object>) () -> {
-          try {
-            return ((ConnectionProvider) cpr.resolve(null).getFirst()).connect();
-          } catch (Exception e) {
-            throw new MuleRuntimeException(e);
-          }
-        })
+        .map(cpr -> (Supplier<Object>) () -> handlingException(() -> ((ConnectionProvider) cpr.resolve(null).getFirst())
+            .connect()))
         .orElse(() -> null);
 
+  }
+
+  private <T> T handlingException(CheckedSupplier<T> supplier, String... errorMessage) {
+    try {
+      return supplier.get();
+    } catch (RuntimeException e) {
+      if (errorMessage.length > 0) {
+        throw new MuleRuntimeException(createStaticMessage(errorMessage[0]), e);
+      }
+      throw e;
+    }
   }
 
 }
