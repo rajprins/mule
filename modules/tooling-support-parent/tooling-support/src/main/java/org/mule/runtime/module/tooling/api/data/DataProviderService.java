@@ -8,18 +8,16 @@ package org.mule.runtime.module.tooling.api.data;
 
 
 import org.mule.api.annotation.NoImplement;
-import org.mule.runtime.api.value.Value;
 import org.mule.runtime.app.declaration.api.ComponentElementDeclaration;
 
-import java.util.Map;
-import java.util.Set;
+import java.util.List;
 
-//TODO: Validate name
+//TODO: Validate name. Should this be here or in mule-api? What about return values?
 @NoImplement
 public interface DataProviderService {
 
-  DataResult<Map<String, Set<Value>>> discover();
+  DataProviderResult<List<DataResult>> discover();
 
-  DataResult<Set<Value>> getValues(ComponentElementDeclaration component, String parameterName);
+  DataProviderResult<DataResult> getValues(ComponentElementDeclaration component, String parameterName);
 
 }
