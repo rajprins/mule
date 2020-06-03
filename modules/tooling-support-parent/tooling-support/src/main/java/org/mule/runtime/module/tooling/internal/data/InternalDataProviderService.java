@@ -7,7 +7,6 @@
 package org.mule.runtime.module.tooling.internal.data;
 
 import static java.util.Collections.emptyList;
-import static java.util.Collections.emptyMap;
 import static java.util.Collections.emptySet;
 import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
@@ -25,9 +24,7 @@ import org.mule.runtime.api.meta.model.ExtensionModel;
 import org.mule.runtime.api.meta.model.config.ConfigurationModel;
 import org.mule.runtime.api.meta.model.operation.HasOperationModels;
 import org.mule.runtime.api.meta.model.operation.OperationModel;
-import org.mule.runtime.api.meta.model.parameter.ParameterModel;
 import org.mule.runtime.api.meta.model.parameter.ParameterizedModel;
-import org.mule.runtime.api.meta.model.parameter.ValueProviderModel;
 import org.mule.runtime.api.meta.model.source.HasSourceModels;
 import org.mule.runtime.api.meta.model.source.SourceModel;
 import org.mule.runtime.api.meta.model.util.ExtensionWalker;
@@ -86,7 +83,7 @@ public class InternalDataProviderService implements DataProviderService {
 
   @Override
   public DataProviderResult<List<DataResult>> discover() {
-    return success(configurationModel()
+    return success(findConfigurationModel()
         .map(this::discoverValuesFromConfigModel)
         .orElse(emptyList()));
   }
@@ -95,7 +92,7 @@ public class InternalDataProviderService implements DataProviderService {
   public DataProviderResult<DataResult> getValues(ComponentElementDeclaration component, String parameterName) {
     return success(
                    extensionManager.getExtension(component.getDeclaringExtension())
-                       .flatMap(em -> getComponentModel(em, component.getName()))
+                       .flatMap(em -> findComponentModel(em, component.getName()))
                        .map(cm -> getValues(cm, parameterName, parameterValueResolver(component)))
                        .orElse(new DefaultDataResult(parameterName, emptySet())));
   }
@@ -150,7 +147,7 @@ public class InternalDataProviderService implements DataProviderService {
                                        () -> reflectionCache);
   }
 
-  private Optional<? extends ComponentModel> getComponentModel(ExtensionModel extensionModel, String componentName) {
+  private Optional<? extends ComponentModel> findComponentModel(ExtensionModel extensionModel, String componentName) {
     final Reference<ComponentModel> foundModel = new Reference<>();
     new ExtensionWalker() {
 
@@ -220,7 +217,7 @@ public class InternalDataProviderService implements DataProviderService {
     };
   }
 
-  private Optional<ConfigurationElementDeclaration> findConfigurationElementDeclaration() {
+  private Optional<ConfigurationElementDeclaration> findConfigurationDeclaration() {
     final Reference<ConfigurationElementDeclaration> configDeclaration = new Reference<>();
     final GlobalElementDeclarationVisitor visitor = new GlobalElementDeclarationVisitor() {
 
@@ -233,22 +230,29 @@ public class InternalDataProviderService implements DataProviderService {
     return ofNullable(configDeclaration.get());
   }
 
-  private Optional<ConfigurationModel> configurationModel() {
-    return findConfigurationElementDeclaration()
+  private Optional<ConfigurationModel> findConfigurationModel() {
+    return findConfigurationProvider().map(ConfigurationProvider::getConfigurationModel);
+  }
+
+  private Optional<ConfigurationProvider> findConfigurationProvider() {
+    return findConfigurationDeclaration()
         .map(ced -> Location.builder().globalName(ced.getRefName()).build())
         .flatMap(cloc -> componentLocator.find(cloc))
-        .filter(c -> c instanceof ConfigurationProvider)
-        .map(c -> ((ConfigurationProvider) c).getConfigurationModel());
+        .filter(cp -> cp instanceof ConfigurationProvider)
+        .map(cp -> (ConfigurationProvider) cp);
   }
 
   private Supplier<Object> connectionSupplier() {
-    return findConfigurationElementDeclaration()
+    return findConfigurationDeclaration()
         .map(ced -> Location.builder().globalName(ced.getRefName()).addConnectionPart().build())
         .flatMap(conloc -> componentLocator.find(conloc))
         .filter(c -> c instanceof ConnectionProviderResolver)
         .map(cpr -> (ConnectionProviderResolver) cpr)
-        .map(cpr -> (Supplier<Object>) () -> handlingException(() -> ((ConnectionProvider) cpr.resolve(null).getFirst())
-            .connect()))
+        .map(cpr -> (Supplier<Object>) () -> handlingException(
+                                                               () -> ((ConnectionProvider) cpr
+                                                                   .resolve(null)
+                                                                   .getFirst())
+                                                                       .connect()))
         .orElse(() -> null);
 
   }
