@@ -29,9 +29,9 @@ public interface TestExtensionAware {
   String CONNECTION_DEPENDANT_SOURCE_PARAMETER_NAME = "connectionDependantParam";
   String ACTING_PARAMETER_DEPENDANT_SOURCE_PARAMETER_NAME = "actingParameterDependantParam";
 
-  String CONFIG_LESS_CONNECTION_LESS_VPOP_ELEMENT_NAME = "configLessConnectionLessVPOP";
-  String CONFIG_LESS_VPOP_ELEMENT_NAME = "configLessVPOP";
-  String ACTING_PARAMETER_VPOP_ELEMENT_NAME = "actingParameterVPOP";
+  String CONFIG_LESS_CONNECTION_LESS_OP_ELEMENT_NAME = "configLessConnectionLessOP";
+  String CONFIG_LESS_OP_ELEMENT_NAME = "configLessOP";
+  String ACTING_PARAMETER_OP_ELEMENT_NAME = "actingParameterOP";
 
   String CONNECTION_CLIENT_NAME_PARAMETER = "clientName";
 
@@ -52,9 +52,9 @@ public interface TestExtensionAware {
         .getDeclaration();
   }
 
-  default OperationElementDeclaration configLessConnectionLessVPOPDeclaration(String configName) {
+  default OperationElementDeclaration configLessConnectionLessOPDeclaration(String configName) {
     return TEST_EXTENSION_DECLARER
-        .newOperation(CONFIG_LESS_CONNECTION_LESS_VPOP_ELEMENT_NAME)
+        .newOperation(CONFIG_LESS_CONNECTION_LESS_OP_ELEMENT_NAME)
         .withConfig(configName)
         .withParameterGroup(newParameterGroup()
             .withParameter(PROVIDED_PARAMETER_NAME, "")
@@ -63,9 +63,9 @@ public interface TestExtensionAware {
 
   }
 
-  default OperationElementDeclaration configLessVPOPDeclaration(String configName) {
+  default OperationElementDeclaration configLessOPDeclaration(String configName) {
     return TEST_EXTENSION_DECLARER
-        .newOperation(CONFIG_LESS_VPOP_ELEMENT_NAME)
+        .newOperation(CONFIG_LESS_OP_ELEMENT_NAME)
         .withConfig(configName)
         .withParameterGroup(newParameterGroup()
             .withParameter(PROVIDED_PARAMETER_NAME, "")
@@ -74,9 +74,9 @@ public interface TestExtensionAware {
 
   }
 
-  default OperationElementDeclaration actingParameterVPOPDeclaration(String configName, String actingParameter) {
+  default OperationElementDeclaration actingParameterOPDeclaration(String configName, String actingParameter) {
     return TEST_EXTENSION_DECLARER
-        .newOperation(ACTING_PARAMETER_VPOP_ELEMENT_NAME)
+        .newOperation(ACTING_PARAMETER_OP_ELEMENT_NAME)
         .withConfig(configName)
         .withParameterGroup(newParameterGroup()
             .withParameter(ACTING_PARAMETER_NAME, actingParameter)

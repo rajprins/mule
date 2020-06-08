@@ -9,8 +9,8 @@ package org.mule.runtime.module.tooling.internal.data;
 import static java.util.Collections.emptySet;
 import static java.util.Optional.ofNullable;
 import org.mule.runtime.api.value.ResolvingFailure;
-import org.mule.runtime.api.value.Value;
 import org.mule.runtime.module.tooling.api.data.DataResult;
+import org.mule.runtime.module.tooling.api.data.DataValue;
 
 import java.util.Optional;
 import java.util.Set;
@@ -18,12 +18,12 @@ import java.util.Set;
 public class DefaultDataResult implements DataResult {
 
   private final String resolverName;
-  private final Set<Value> data;
+  private final Set<DataValue> data;
   private final ResolvingFailure resolvingFailure;
 
-  public DefaultDataResult(String elementName,
-                           Set<Value> data) {
-    this.resolverName = elementName;
+  public DefaultDataResult(String resolverName,
+                           Set<DataValue> data) {
+    this.resolverName = resolverName;
     this.data = data;
     this.resolvingFailure = null;
   }
@@ -41,7 +41,7 @@ public class DefaultDataResult implements DataResult {
   }
 
   @Override
-  public Set<Value> getData() {
+  public Set<DataValue> getData() {
     return this.data;
   }
 
