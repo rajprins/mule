@@ -8,40 +8,40 @@ package org.mule.runtime.module.tooling.internal.data;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptySet;
-import static java.util.Optional.ofNullable;
 import static java.util.stream.Collectors.toList;
 import static org.mule.runtime.api.i18n.I18nMessageFactory.createStaticMessage;
 import static org.mule.runtime.api.value.ResolvingFailure.Builder.newFailure;
+import static org.mule.runtime.extension.api.metadata.NullMetadataResolver.NULL_CATEGORY_NAME;
+import static org.mule.runtime.module.extension.internal.util.MuleExtensionUtils.getClassLoader;
 import static org.mule.runtime.module.tooling.internal.data.DefaultDataProviderResult.success;
+import static org.mule.runtime.module.tooling.internal.data.DefaultDataValue.fromKeys;
+import static org.mule.runtime.module.tooling.internal.data.DefaultDataValue.fromValues;
+import static org.mule.runtime.module.tooling.internal.data.NoOpMetadataCache.getNoOpCache;
 import org.mule.runtime.api.component.location.ConfigurationComponentLocator;
-import org.mule.runtime.api.component.location.Location;
-import org.mule.runtime.api.connection.ConnectionProvider;
 import org.mule.runtime.api.exception.MuleException;
 import org.mule.runtime.api.exception.MuleRuntimeException;
 import org.mule.runtime.api.meta.model.ComponentModel;
-import org.mule.runtime.api.meta.model.EnrichableModel;
-import org.mule.runtime.api.meta.model.ExtensionModel;
 import org.mule.runtime.api.meta.model.config.ConfigurationModel;
-import org.mule.runtime.api.meta.model.operation.HasOperationModels;
-import org.mule.runtime.api.meta.model.operation.OperationModel;
 import org.mule.runtime.api.meta.model.parameter.ParameterizedModel;
-import org.mule.runtime.api.meta.model.source.HasSourceModels;
-import org.mule.runtime.api.meta.model.source.SourceModel;
-import org.mule.runtime.api.meta.model.util.ExtensionWalker;
+import org.mule.runtime.api.metadata.MetadataContext;
+import org.mule.runtime.api.metadata.MetadataKeysContainer;
+import org.mule.runtime.api.metadata.resolving.MetadataResult;
+import org.mule.runtime.api.util.LazyValue;
 import org.mule.runtime.api.util.Reference;
 import org.mule.runtime.app.declaration.api.ArtifactDeclaration;
 import org.mule.runtime.app.declaration.api.ComponentElementDeclaration;
-import org.mule.runtime.app.declaration.api.ConfigurationElementDeclaration;
-import org.mule.runtime.app.declaration.api.GlobalElementDeclarationVisitor;
 import org.mule.runtime.app.declaration.api.ParameterValueVisitor;
 import org.mule.runtime.app.declaration.api.fluent.ParameterSimpleValue;
 import org.mule.runtime.core.api.MuleContext;
+import org.mule.runtime.core.api.connector.ConnectionManager;
 import org.mule.runtime.core.api.extension.ExtensionManager;
-import org.mule.runtime.core.api.util.func.CheckedSupplier;
-import org.mule.runtime.extension.api.runtime.config.ConfigurationProvider;
+import org.mule.runtime.extension.api.declaration.type.ExtensionsTypeLoaderFactory;
+import org.mule.runtime.extension.api.property.MetadataKeyIdModelProperty;
+import org.mule.runtime.extension.api.runtime.config.ConfigurationInstance;
 import org.mule.runtime.extension.api.values.ValueResolvingException;
 import org.mule.runtime.module.extension.internal.loader.java.property.ValueProviderFactoryModelProperty;
-import org.mule.runtime.module.extension.internal.runtime.resolver.ConnectionProviderResolver;
+import org.mule.runtime.module.extension.internal.metadata.DefaultMetadataContext;
+import org.mule.runtime.module.extension.internal.metadata.MetadataMediator;
 import org.mule.runtime.module.extension.internal.runtime.resolver.ParameterValueResolver;
 import org.mule.runtime.module.extension.internal.runtime.resolver.StaticValueResolver;
 import org.mule.runtime.module.extension.internal.runtime.resolver.ValueResolver;
@@ -50,6 +50,7 @@ import org.mule.runtime.module.extension.internal.value.ValueProviderMediator;
 import org.mule.runtime.module.tooling.api.data.DataProviderResult;
 import org.mule.runtime.module.tooling.api.data.DataProviderService;
 import org.mule.runtime.module.tooling.api.data.DataResult;
+import org.mule.runtime.module.tooling.internal.utils.ArtifactHelper;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -57,7 +58,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
@@ -75,42 +78,100 @@ public class InternalDataProviderService implements DataProviderService {
   @Inject
   private MuleContext muleContext;
 
-  private ArtifactDeclaration artifactDeclaration;
+  @Inject
+  private ConnectionManager connectionManager;
+
+  private LazyValue<ArtifactHelper> artifactHelperLazyValue;
 
   InternalDataProviderService(ArtifactDeclaration artifactDeclaration) {
-    this.artifactDeclaration = artifactDeclaration;
+    this.artifactHelperLazyValue =
+        new LazyValue<>(() -> new ArtifactHelper(extensionManager, componentLocator, artifactDeclaration));
+  }
+
+  private ArtifactHelper artifactHelper() {
+    return artifactHelperLazyValue.get();
   }
 
   @Override
   public DataProviderResult<List<DataResult>> discover() {
-    return success(findConfigurationModel()
+    return success(artifactHelper().findConfigurationModel()
         .map(this::discoverValuesFromConfigModel)
         .orElse(emptyList()));
   }
 
   @Override
   public DataProviderResult<DataResult> getValues(ComponentElementDeclaration component, String parameterName) {
-    return success(
-                   extensionManager.getExtension(component.getDeclaringExtension())
-                       .flatMap(em -> findComponentModel(em, component.getName()))
-                       .map(cm -> getValues(cm, parameterName, parameterValueResolver(component)))
-                       .orElse(new DefaultDataResult(parameterName, emptySet())));
+    return success(artifactHelper().findComponentModel(component)
+        .map(cm -> discoverParameterValues(cm, parameterName, parameterValueResolver(component)))
+        .orElse(new DefaultDataResult(parameterName, emptySet())));
   }
 
-  private <T extends ParameterizedModel & EnrichableModel> DataResult getValues(T componentModel,
-                                                                                String parameterName,
-                                                                                ParameterValueResolver parameterValueResolver) {
-    ValueProviderMediator<T> valueProviderMediator = createValueProviderMediator(componentModel);
-    try {
-      return new DefaultDataResult(getResolverName(componentModel, parameterName),
-                                   valueProviderMediator.getValues(parameterName,
-                                                                   parameterValueResolver,
-                                                                   connectionSupplier(),
-                                                                   () -> null));
-    } catch (ValueResolvingException e) {
-      return new DefaultDataResult(getResolverName(componentModel, parameterName),
-                                   newFailure(e).build());
-    }
+  private List<DataResult> discoverValuesFromConfigModel(ConfigurationModel configurationModel) {
+    final List<DataResult> results = new LinkedList<>();
+    configurationModel.getOperationModels().stream().map(this::getResultsForModel).forEach(results::addAll);
+    configurationModel.getSourceModels().stream().map(this::getResultsForModel).forEach(results::addAll);
+    return results;
+  }
+
+  private <T extends ComponentModel> DataResult discoverParameterValues(T componentModel,
+                                                                        String parameterName,
+                                                                        ParameterValueResolver parameterValueResolver) {
+
+    return componentModel
+        .getModelProperty(MetadataKeyIdModelProperty.class)
+        .map(mp -> Objects.equals(mp.getParameterName(), parameterName) ? mp : null)
+        .map(mp -> resolveMetadataKeys(componentModel, s -> mp.getCategoryName().map(cn -> cn.equals(s)).orElse(false)))
+        .map(r -> r.get(0))
+        .orElseGet(() -> {
+          ValueProviderMediator<T> valueProviderMediator = createValueProviderMediator(componentModel);
+          final String resolveName = getResolverName(componentModel, parameterName);
+          try {
+            return new DefaultDataResult(resolveName,
+                                         fromValues(valueProviderMediator.getValues(parameterName,
+                                                                                    parameterValueResolver,
+                                                                                    connectionSupplier(),
+                                                                                    () -> null)));
+          } catch (ValueResolvingException e) {
+            return new DefaultDataResult(resolveName,
+                                         newFailure(e).build());
+          }
+        });
+
+  }
+
+  private <T extends ComponentModel> List<DataResult> getResultsForModel(T model) {
+    final List<DataResult> results = new LinkedList<>();
+    results.addAll(resolveValues(model));
+    results.addAll(resolveMetadataKeys(model, s -> true));
+    return results;
+  }
+
+  private <T extends ComponentModel> List<DataResult> resolveValues(T model) {
+    return model.getAllParameterModels()
+        .stream()
+        .filter(pm -> pm.getValueProviderModel().isPresent())
+        .map(vpp -> discoverParameterValues(model, vpp.getName(), null))
+        .collect(toList());
+  }
+
+  private <T extends ComponentModel> List<DataResult> resolveMetadataKeys(T model, Predicate<String> categoryFilter) {
+    MetadataMediator<T> metadataMediator = new MetadataMediator<>(model);
+    MetadataResult<MetadataKeysContainer> keysResult = metadataMediator.getMetadataKeys(createMetadataContext(), reflectionCache);
+
+    return keysResult.get()
+        .getKeysByCategory()
+        .entrySet()
+        .stream()
+        .filter(e -> categoryFilter.test(e.getKey()))
+        .filter(e -> !e.getKey().equals(NULL_CATEGORY_NAME))
+        .map((e -> new DefaultDataResult(e.getKey(), fromKeys(e.getValue()))))
+        .collect(toList());
+  }
+
+  private <T extends ComponentModel> ValueProviderMediator<T> createValueProviderMediator(T constructModel) {
+    return new ValueProviderMediator<>(constructModel,
+                                       () -> muleContext,
+                                       () -> reflectionCache);
   }
 
   private String getResolverName(ParameterizedModel componentModel, String parameterName) {
@@ -126,49 +187,24 @@ public class InternalDataProviderService implements DataProviderService {
                                                                         parameterName)));
   }
 
-  private List<DataResult> discoverValuesFromConfigModel(ConfigurationModel configurationModel) {
-    final List<DataResult> results = new LinkedList<>();
-    configurationModel.getOperationModels().stream().map(this::getValuesForModel).forEach(results::addAll);
-    configurationModel.getSourceModels().stream().map(this::getValuesForModel).forEach(results::addAll);
-    return results;
+  private Supplier<Object> connectionSupplier() {
+    return artifactHelper().getConnectionInstance()
+        .map(ci -> (Supplier<Object>) () -> ci)
+        .orElse(() -> null);
+
   }
 
-  private <T extends ParameterizedModel & EnrichableModel> List<DataResult> getValuesForModel(T model) {
-    return model.getAllParameterModels()
-        .stream()
-        .filter(pm -> pm.getValueProviderModel().isPresent())
-        .map(vpp -> getValues(model, vpp.getName(), null))
-        .collect(toList());
-  }
-
-  private <T extends ParameterizedModel & EnrichableModel> ValueProviderMediator<T> createValueProviderMediator(T constructModel) {
-    return new ValueProviderMediator<>(constructModel,
-                                       () -> muleContext,
-                                       () -> reflectionCache);
-  }
-
-  private Optional<? extends ComponentModel> findComponentModel(ExtensionModel extensionModel, String componentName) {
-    final Reference<ComponentModel> foundModel = new Reference<>();
-    new ExtensionWalker() {
-
-      @Override
-      protected void onOperation(HasOperationModels owner, OperationModel model) {
-        setAndStop(model);
-      }
-
-      @Override
-      protected void onSource(HasSourceModels owner, SourceModel model) {
-        setAndStop(model);
-      }
-
-      private void setAndStop(ComponentModel model) {
-        if (Objects.equals(model.getName(), componentName)) {
-          foundModel.set(model);
-          stop();
-        }
-      }
-    }.walk(extensionModel);
-    return ofNullable(foundModel.get());
+  private MetadataContext createMetadataContext() {
+    Supplier<Optional<ConfigurationInstance>> configSupplier = () -> artifactHelper().getConfigurationInstance();
+    return artifactHelper().findConfigurationDeclaration().map(
+                                                               cd -> new DefaultMetadataContext(configSupplier,
+                                                                                                connectionManager,
+                                                                                                getNoOpCache(),
+                                                                                                ExtensionsTypeLoaderFactory
+                                                                                                    .getDefault()
+                                                                                                    .createTypeLoader(getClassLoader(artifactHelper()
+                                                                                                        .getExtensionModel(cd)))))
+        .orElseThrow(() -> new MuleRuntimeException(createStaticMessage("Could not create MetadataContext")));
   }
 
   private ParameterValueResolver parameterValueResolver(ComponentElementDeclaration componentElementDeclaration) {
@@ -215,57 +251,6 @@ public class InternalDataProviderService implements DataProviderService {
         return parametersMap;
       }
     };
-  }
-
-  private Optional<ConfigurationElementDeclaration> findConfigurationDeclaration() {
-    final Reference<ConfigurationElementDeclaration> configDeclaration = new Reference<>();
-    final GlobalElementDeclarationVisitor visitor = new GlobalElementDeclarationVisitor() {
-
-      @Override
-      public void visit(ConfigurationElementDeclaration declaration) {
-        configDeclaration.set(declaration);
-      }
-    };
-    artifactDeclaration.getGlobalElements().forEach(gld -> gld.accept(visitor));
-    return ofNullable(configDeclaration.get());
-  }
-
-  private Optional<ConfigurationModel> findConfigurationModel() {
-    return findConfigurationProvider().map(ConfigurationProvider::getConfigurationModel);
-  }
-
-  private Optional<ConfigurationProvider> findConfigurationProvider() {
-    return findConfigurationDeclaration()
-        .map(ced -> Location.builder().globalName(ced.getRefName()).build())
-        .flatMap(cloc -> componentLocator.find(cloc))
-        .filter(cp -> cp instanceof ConfigurationProvider)
-        .map(cp -> (ConfigurationProvider) cp);
-  }
-
-  private Supplier<Object> connectionSupplier() {
-    return findConfigurationDeclaration()
-        .map(ced -> Location.builder().globalName(ced.getRefName()).addConnectionPart().build())
-        .flatMap(conloc -> componentLocator.find(conloc))
-        .filter(c -> c instanceof ConnectionProviderResolver)
-        .map(cpr -> (ConnectionProviderResolver) cpr)
-        .map(cpr -> (Supplier<Object>) () -> handlingException(
-                                                               () -> ((ConnectionProvider) cpr
-                                                                   .resolve(null)
-                                                                   .getFirst())
-                                                                       .connect()))
-        .orElse(() -> null);
-
-  }
-
-  private <T> T handlingException(CheckedSupplier<T> supplier, String... errorMessage) {
-    try {
-      return supplier.get();
-    } catch (RuntimeException e) {
-      if (errorMessage.length > 0) {
-        throw new MuleRuntimeException(createStaticMessage(errorMessage[0]), e);
-      }
-      throw e;
-    }
   }
 
 }

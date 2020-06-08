@@ -7,7 +7,6 @@
 package org.mule.runtime.module.tooling.api.data;
 
 import org.mule.runtime.api.value.ResolvingFailure;
-import org.mule.runtime.api.value.Value;
 
 import java.util.Optional;
 import java.util.Set;
@@ -17,7 +16,7 @@ public interface DataResult {
 
   String getResolverName();
 
-  Set<Value> getData();
+  Set<DataValue> getData();
 
   Optional<ResolvingFailure> getFailure();
 

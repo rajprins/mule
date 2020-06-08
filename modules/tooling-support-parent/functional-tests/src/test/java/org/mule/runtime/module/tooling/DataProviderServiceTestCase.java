@@ -14,6 +14,7 @@ import static org.mule.test.infrastructure.maven.MavenTestUtils.getMavenLocalRep
 import org.mule.runtime.api.component.location.Location;
 import org.mule.runtime.api.connection.ConnectionValidationResult;
 import org.mule.runtime.api.connectivity.ConnectivityTestingService;
+import org.mule.runtime.app.declaration.api.ComponentElementDeclaration;
 import org.mule.runtime.module.tooling.api.data.DataProviderResult;
 import org.mule.runtime.module.tooling.api.data.DataProviderService;
 import org.mule.runtime.app.declaration.api.ArtifactDeclaration;
@@ -42,6 +43,7 @@ public class DataProviderServiceTestCase extends AbstractFakeMuleServerTestCase 
   private static final String CONFIG_NAME = "dummyConfig";
   private static final String CLIENT_NAME = "client";
   private static final String PROVIDED_PARAMETER_NAME = "providedParameter";
+  private static final String METADATA_KEY_PARAMETER = "metadataKey";
 
   private ToolingService toolingService;
 
@@ -100,8 +102,19 @@ public class DataProviderServiceTestCase extends AbstractFakeMuleServerTestCase 
       assertThat(r.getData().iterator().next().getId(), is(CLIENT_NAME));
       totalValidations.incrementAndGet();
     });
-    //3 operation resolvers and 3 source resolvers
-    assertThat(totalValidations.get(), is(6));
+    validateResult(providerResult.getResult(), "ConfigLessConnectionLessMetadataResolver", r -> {
+      assertThat(r.isSuccessful(), is(true));
+      assertThat(r.getData(), hasSize(1));
+      assertThat(r.getData().iterator().next().getId(), is("ConfigLessConnectionLessMetadataResolver"));
+      totalValidations.incrementAndGet();
+    });
+    validateResult(providerResult.getResult(), "ConfigLessMetadataResolver", r -> {
+      assertThat(r.isSuccessful(), is(true));
+      assertThat(r.getData(), hasSize(1));
+      assertThat(r.getData().iterator().next().getId(), is(CLIENT_NAME));
+      totalValidations.incrementAndGet();
+    });
+    assertThat(totalValidations.get(), is(providerResult.getResult().size()));
   }
 
   private void validateResult(List<DataResult> results, String resolverName, Consumer<DataResult> validator) {
@@ -109,57 +122,41 @@ public class DataProviderServiceTestCase extends AbstractFakeMuleServerTestCase 
   }
 
   @Test
-  public void configLessConnectionLessValueProviderOnOperation() {
-    DataProviderService dataProviderService =
-        addDependency(toolingService.newDataProviderServiceBuilder())
-            .setArtifactDeclaration(buildArtifactDeclaration())
-            .build();
-
-    DataProviderResult<DataResult> providerResult =
-        dataProviderService.getValues(configLessConnectionLessVPOPDeclaration(CONFIG_NAME),
-                                      PROVIDED_PARAMETER_NAME);
-    assertThat(providerResult.isSuccessful(), equalTo(true));
-    DataResult dataResult = providerResult.getResult();
-    assertThat(dataResult.isSuccessful(), is(true));
-    assertThat(dataResult.getData(), hasSize(1));
-    assertThat(dataResult.getData().iterator().next().getId(), is("ConfigLessConnectionLessNoActingParameter"));
+  public void configLessConnectionLessOnOperation() {
+    ComponentElementDeclaration elementDeclaration = configLessConnectionLessOPDeclaration(CONFIG_NAME);
+    getResultAndValidate(elementDeclaration, PROVIDED_PARAMETER_NAME, "ConfigLessConnectionLessNoActingParameter");
+    getResultAndValidate(elementDeclaration, METADATA_KEY_PARAMETER, "ConfigLessConnectionLessMetadataResolver");
   }
 
   @Test
-  public void configLessValueProviderOnOperation() {
-    DataProviderService dataProviderService =
-        addDependency(toolingService.newDataProviderServiceBuilder())
-            .setArtifactDeclaration(buildArtifactDeclaration())
-            .build();
-
-    DataProviderResult<DataResult> providerResult = dataProviderService.getValues(configLessVPOPDeclaration(CONFIG_NAME),
-                                                                                  PROVIDED_PARAMETER_NAME);
-
-    assertThat(providerResult.isSuccessful(), equalTo(true));
-    DataResult dataResult = providerResult.getResult();
-    assertThat(dataResult.isSuccessful(), is(true));
-    assertThat(dataResult.getData(), hasSize(1));
-    assertThat(dataResult.getData().iterator().next().getId(), is(CLIENT_NAME));
+  public void configLessOnOperation() {
+    ComponentElementDeclaration elementDeclaration = configLessOPDeclaration(CONFIG_NAME);
+    getResultAndValidate(elementDeclaration, PROVIDED_PARAMETER_NAME, CLIENT_NAME);
+    getResultAndValidate(elementDeclaration, METADATA_KEY_PARAMETER, CLIENT_NAME);
   }
 
   @Test
-  public void actingParameterValueProviderOnOperation() {
-    DataProviderService dataProviderService =
-        addDependency(toolingService.newDataProviderServiceBuilder())
-            .setArtifactDeclaration(buildArtifactDeclaration())
-            .build();
-
+  public void actingParameterOnOperation() {
     final String actingParameter = "actingParameter";
+    ComponentElementDeclaration elementDeclaration = actingParameterOPDeclaration(CONFIG_NAME, actingParameter);
+    getResultAndValidate(elementDeclaration, PROVIDED_PARAMETER_NAME, actingParameter);
+  }
+
+  private void getResultAndValidate(ComponentElementDeclaration elementDeclaration, String parameterName, String expectedValue) {
+    DataProviderService dataProviderService =
+        addDependency(toolingService.newDataProviderServiceBuilder())
+            .setArtifactDeclaration(buildArtifactDeclaration())
+            .build();
 
     DataProviderResult<DataResult> providerResult =
-        dataProviderService.getValues(actingParameterVPOPDeclaration(CONFIG_NAME, actingParameter),
-                                      PROVIDED_PARAMETER_NAME);
+        dataProviderService.getValues(elementDeclaration,
+                                      parameterName);
 
     assertThat(providerResult.isSuccessful(), equalTo(true));
     DataResult dataResult = providerResult.getResult();
     assertThat(dataResult.isSuccessful(), is(true));
     assertThat(dataResult.getData(), hasSize(1));
-    assertThat(dataResult.getData().iterator().next().getId(), is(actingParameter));
+    assertThat(dataResult.getData().iterator().next().getId(), is(expectedValue));
   }
 
   private <T extends ArtifactAgnosticServiceBuilder<T, ?>> T addDependency(T serviceBuilder) {
