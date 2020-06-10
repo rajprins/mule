@@ -12,8 +12,11 @@ import org.mule.runtime.app.declaration.api.ArtifactDeclaration;
 import org.mule.runtime.app.declaration.api.ConfigurationElementDeclaration;
 import org.mule.runtime.app.declaration.api.ConnectionElementDeclaration;
 import org.mule.runtime.app.declaration.api.OperationElementDeclaration;
+import org.mule.runtime.app.declaration.api.ParameterValue;
 import org.mule.runtime.app.declaration.api.SourceElementDeclaration;
 import org.mule.runtime.app.declaration.api.fluent.ElementDeclarer;
+import org.mule.runtime.app.declaration.api.fluent.ParameterObjectValue;
+import org.mule.runtime.app.declaration.api.fluent.ParameterSimpleValue;
 
 public interface TestExtensionAware {
 
@@ -32,6 +35,7 @@ public interface TestExtensionAware {
   String CONFIG_LESS_CONNECTION_LESS_OP_ELEMENT_NAME = "configLessConnectionLessOP";
   String CONFIG_LESS_OP_ELEMENT_NAME = "configLessOP";
   String ACTING_PARAMETER_OP_ELEMENT_NAME = "actingParameterOP";
+  String COMPLEX_ACTING_PARAMETER_OP_ELEMENT_NAME = "complexActingParameterOP";
 
   String CONNECTION_CLIENT_NAME_PARAMETER = "clientName";
 
@@ -77,6 +81,23 @@ public interface TestExtensionAware {
   default OperationElementDeclaration actingParameterOPDeclaration(String configName, String actingParameter) {
     return TEST_EXTENSION_DECLARER
         .newOperation(ACTING_PARAMETER_OP_ELEMENT_NAME)
+        .withConfig(configName)
+        .withParameterGroup(newParameterGroup()
+            .withParameter(ACTING_PARAMETER_NAME, actingParameter)
+            .withParameter(PROVIDED_PARAMETER_NAME, "")
+            .getDeclaration())
+        .getDeclaration();
+
+  }
+
+  default OperationElementDeclaration complexActingParameterOPDeclaration(String configName, String actingParameterP1,
+                                                                          String innerActingParameter) {
+    final ParameterValue innerPojoValue =
+        ParameterObjectValue.builder().ofType("InnerPojo").withParameter("innerParam", innerActingParameter).build();
+    final ParameterValue actingParameter =
+        ParameterObjectValue.builder().ofType("ActingParameter").withParameter("innerPojo", innerPojoValue).build();
+    return TEST_EXTENSION_DECLARER
+        .newOperation(COMPLEX_ACTING_PARAMETER_OP_ELEMENT_NAME)
         .withConfig(configName)
         .withParameterGroup(newParameterGroup()
             .withParameter(ACTING_PARAMETER_NAME, actingParameter)

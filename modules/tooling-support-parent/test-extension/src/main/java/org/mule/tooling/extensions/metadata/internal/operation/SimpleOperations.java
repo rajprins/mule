@@ -10,7 +10,9 @@ import org.mule.tooling.extensions.metadata.internal.config.SimpleConfiguration;
 import org.mule.tooling.extensions.metadata.internal.connection.TstExtensionClient;
 import org.mule.tooling.extensions.metadata.internal.metadata.ConfigLessConnectionLessMetadataResolver;
 import org.mule.tooling.extensions.metadata.internal.metadata.ConfigLessMetadataResolver;
+import org.mule.tooling.extensions.metadata.internal.parameters.ActingParameter;
 import org.mule.tooling.extensions.metadata.internal.value.ActingParameterVP;
+import org.mule.tooling.extensions.metadata.internal.value.ComplexActingParameterVP;
 import org.mule.tooling.extensions.metadata.internal.value.ConfigLessConnectionLessNoActingParamVP;
 import org.mule.tooling.extensions.metadata.internal.value.ConfigLessNoActingParamVP;
 
@@ -36,6 +38,13 @@ public class SimpleOperations {
                                                 @Connection TstExtensionClient client,
                                                 String actingParameter,
                                                 @OfValues(ActingParameterVP.class) String providedParameter) {
+    return null;
+  }
+
+  public Result<Void, Object> complexActingParameterOP(@Config SimpleConfiguration configuration,
+                                                       @Connection TstExtensionClient client,
+                                                       ActingParameter actingParameter,
+                                                       @OfValues(ComplexActingParameterVP.class) String providedParameter) {
     return null;
   }
 }
