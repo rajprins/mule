@@ -8,15 +8,19 @@ package org.mule.runtime.module.tooling.internal.data;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptySet;
+import static java.util.Optional.empty;
 import static java.util.stream.Collectors.toList;
 import static org.mule.runtime.api.i18n.I18nMessageFactory.createStaticMessage;
 import static org.mule.runtime.api.value.ResolvingFailure.Builder.newFailure;
+import static org.mule.runtime.core.internal.event.NullEventFactory.getNullEvent;
 import static org.mule.runtime.extension.api.metadata.NullMetadataResolver.NULL_CATEGORY_NAME;
 import static org.mule.runtime.module.extension.internal.util.MuleExtensionUtils.getClassLoader;
 import static org.mule.runtime.module.tooling.internal.data.DefaultDataProviderResult.success;
 import static org.mule.runtime.module.tooling.internal.data.DefaultDataValue.fromKeys;
 import static org.mule.runtime.module.tooling.internal.data.DefaultDataValue.fromValues;
 import static org.mule.runtime.module.tooling.internal.data.NoOpMetadataCache.getNoOpCache;
+import static org.mule.runtime.module.tooling.internal.data.ParameterExtractor.extractValue;
+import org.mule.runtime.api.component.Component;
 import org.mule.runtime.api.component.location.ConfigurationComponentLocator;
 import org.mule.runtime.api.exception.MuleException;
 import org.mule.runtime.api.exception.MuleRuntimeException;
@@ -30,19 +34,31 @@ import org.mule.runtime.api.util.LazyValue;
 import org.mule.runtime.api.util.Reference;
 import org.mule.runtime.app.declaration.api.ArtifactDeclaration;
 import org.mule.runtime.app.declaration.api.ComponentElementDeclaration;
+import org.mule.runtime.app.declaration.api.ParameterValue;
 import org.mule.runtime.app.declaration.api.ParameterValueVisitor;
+import org.mule.runtime.app.declaration.api.fluent.ParameterListValue;
+import org.mule.runtime.app.declaration.api.fluent.ParameterObjectValue;
 import org.mule.runtime.app.declaration.api.fluent.ParameterSimpleValue;
 import org.mule.runtime.core.api.MuleContext;
+import org.mule.runtime.core.api.config.ConfigurationException;
 import org.mule.runtime.core.api.connector.ConnectionManager;
+import org.mule.runtime.core.api.el.ExpressionManager;
 import org.mule.runtime.core.api.extension.ExtensionManager;
+import org.mule.runtime.core.api.transaction.TransactionConfig;
 import org.mule.runtime.extension.api.declaration.type.ExtensionsTypeLoaderFactory;
 import org.mule.runtime.extension.api.property.MetadataKeyIdModelProperty;
 import org.mule.runtime.extension.api.runtime.config.ConfigurationInstance;
+import org.mule.runtime.extension.api.runtime.operation.ExecutionContext;
 import org.mule.runtime.extension.api.values.ValueResolvingException;
 import org.mule.runtime.module.extension.internal.loader.java.property.ValueProviderFactoryModelProperty;
 import org.mule.runtime.module.extension.internal.metadata.DefaultMetadataContext;
 import org.mule.runtime.module.extension.internal.metadata.MetadataMediator;
+import org.mule.runtime.module.extension.internal.runtime.DefaultExecutionContext;
+import org.mule.runtime.module.extension.internal.runtime.config.ResolverSetBasedParameterResolver;
+import org.mule.runtime.module.extension.internal.runtime.operation.OperationParameterValueResolver;
 import org.mule.runtime.module.extension.internal.runtime.resolver.ParameterValueResolver;
+import org.mule.runtime.module.extension.internal.runtime.resolver.ParametersResolver;
+import org.mule.runtime.module.extension.internal.runtime.resolver.ResolverSet;
 import org.mule.runtime.module.extension.internal.runtime.resolver.StaticValueResolver;
 import org.mule.runtime.module.extension.internal.runtime.resolver.ValueResolver;
 import org.mule.runtime.module.extension.internal.util.ReflectionCache;
@@ -81,6 +97,9 @@ public class InternalDataProviderService implements DataProviderService {
   @Inject
   private ConnectionManager connectionManager;
 
+  @Inject
+  private ExpressionManager expressionManager;
+
   private LazyValue<ArtifactHelper> artifactHelperLazyValue;
 
   InternalDataProviderService(ArtifactDeclaration artifactDeclaration) {
@@ -102,7 +121,7 @@ public class InternalDataProviderService implements DataProviderService {
   @Override
   public DataProviderResult<DataResult> getValues(ComponentElementDeclaration component, String parameterName) {
     return success(artifactHelper().findComponentModel(component)
-        .map(cm -> discoverParameterValues(cm, parameterName, parameterValueResolver(component)))
+        .map(cm -> discoverParameterValues(cm, parameterName, parameterValueResolver(component, cm)))
         .orElse(new DefaultDataResult(parameterName, emptySet())));
   }
 
@@ -207,19 +226,9 @@ public class InternalDataProviderService implements DataProviderService {
         .orElseThrow(() -> new MuleRuntimeException(createStaticMessage("Could not create MetadataContext")));
   }
 
-  private ParameterValueResolver parameterValueResolver(ComponentElementDeclaration componentElementDeclaration) {
-    Map<String, ValueResolver<?>> parametersMap = new HashMap<>();
-
-    final Reference<Object> valueRef = new Reference<>();
-
-    final ParameterValueVisitor parameterVisitor = new ParameterValueVisitor() {
-
-      @Override
-      public void visitSimpleValue(ParameterSimpleValue text) {
-        valueRef.set(text.getValue());
-      }
-
-    };
+  private <T extends ComponentModel> ParameterValueResolver parameterValueResolver(ComponentElementDeclaration componentElementDeclaration,
+                                                        T model) {
+    Map<String, Object> parametersMap = new HashMap<>();
 
     componentElementDeclaration
         .getParameterGroups()
@@ -227,30 +236,28 @@ public class InternalDataProviderService implements DataProviderService {
                  parameterGroup -> parameterGroup
                      .getParameters()
                      .forEach(
-                              p -> {
-                                p.getValue().accept(parameterVisitor);
-                                parametersMap.put(p.getName(), new StaticValueResolver<>(valueRef.get()));
-                              }));
+                              p -> parametersMap.put(p.getName(), extractValue(p.getValue()))));
 
-    return new ParameterValueResolver() {
-
-      private final Map<String, ValueResolver<?>> parameters = parametersMap;
-
-      @Override
-      public Object getParameterValue(String parameterName) {
-        ValueResolver<?> valueResolver = parameters.get(parameterName);
-        try {
-          return valueResolver != null ? valueResolver.resolve(null) : null;
-        } catch (MuleException e) {
-          throw new MuleRuntimeException(e);
-        }
-      }
-
-      @Override
-      public Map<String, ValueResolver<?>> getParameters() {
-        return parametersMap;
-      }
-    };
+    try {
+      final ResolverSet resolverSet =
+          ParametersResolver.fromValues(parametersMap, muleContext, false, reflectionCache, expressionManager)
+              .getParametersAsResolverSet(model, muleContext);
+      final ExecutionContext<T> executionContext = new DefaultExecutionContext<>(null,
+                                                                            artifactHelper().getConfigurationInstance(),
+                                                                            parametersMap,
+                                                                            model,
+                                                                            getNullEvent(),
+                                                                            null,
+                                                                            null,
+                                                                            null,
+                                                                            null,
+                                                                            null,
+                                                                            empty(),
+                                                                            muleContext);
+      return new OperationParameterValueResolver<>(executionContext, resolverSet, reflectionCache, expressionManager);
+    } catch (ConfigurationException e) {
+      throw new MuleRuntimeException(e);
+    }
   }
 
 }

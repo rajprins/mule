@@ -13,7 +13,7 @@
 
     <properties>
         <formatterConfigPath>../../../formatter.xml</formatterConfigPath>
-        <settingsFile>${java.io.tmpdir}/effective-settings.xml</settingsFile>
+        <settingsFile>${java.io.tmpdir}/settings.xml</settingsFile>
     </properties>
 
     <dependencies>

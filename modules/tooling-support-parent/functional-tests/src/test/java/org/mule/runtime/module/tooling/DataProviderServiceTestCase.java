@@ -142,6 +142,15 @@ public class DataProviderServiceTestCase extends AbstractFakeMuleServerTestCase 
     getResultAndValidate(elementDeclaration, PROVIDED_PARAMETER_NAME, actingParameter);
   }
 
+  @Test
+  public void complexActingParameterOnOperation() {
+    final String innerPojoParam = "innerPojoParm";
+    final String actingParameterParam = "actingParameterParam";
+    ComponentElementDeclaration elementDeclaration =
+        complexActingParameterOPDeclaration(CONFIG_NAME, actingParameterParam, innerPojoParam);
+    getResultAndValidate(elementDeclaration, PROVIDED_PARAMETER_NAME, "");
+  }
+
   private void getResultAndValidate(ComponentElementDeclaration elementDeclaration, String parameterName, String expectedValue) {
     DataProviderService dataProviderService =
         addDependency(toolingService.newDataProviderServiceBuilder())
