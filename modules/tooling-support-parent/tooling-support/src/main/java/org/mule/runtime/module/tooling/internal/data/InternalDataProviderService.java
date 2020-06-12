@@ -227,7 +227,7 @@ public class InternalDataProviderService implements DataProviderService {
   }
 
   private <T extends ComponentModel> ParameterValueResolver parameterValueResolver(ComponentElementDeclaration componentElementDeclaration,
-                                                        T model) {
+                                                                                   T model) {
     Map<String, Object> parametersMap = new HashMap<>();
 
     componentElementDeclaration
@@ -242,19 +242,7 @@ public class InternalDataProviderService implements DataProviderService {
       final ResolverSet resolverSet =
           ParametersResolver.fromValues(parametersMap, muleContext, false, reflectionCache, expressionManager)
               .getParametersAsResolverSet(model, muleContext);
-      final ExecutionContext<T> executionContext = new DefaultExecutionContext<>(null,
-                                                                            artifactHelper().getConfigurationInstance(),
-                                                                            parametersMap,
-                                                                            model,
-                                                                            getNullEvent(),
-                                                                            null,
-                                                                            null,
-                                                                            null,
-                                                                            null,
-                                                                            null,
-                                                                            empty(),
-                                                                            muleContext);
-      return new OperationParameterValueResolver<>(executionContext, resolverSet, reflectionCache, expressionManager);
+      return new ResolverSetBasedParameterResolver(resolverSet, model, reflectionCache, expressionManager);
     } catch (ConfigurationException e) {
       throw new MuleRuntimeException(e);
     }

@@ -8,6 +8,7 @@ package org.mule.runtime.module.tooling;
 
 import static org.mule.runtime.app.declaration.api.fluent.ElementDeclarer.newArtifact;
 import static org.mule.runtime.app.declaration.api.fluent.ElementDeclarer.newParameterGroup;
+import static org.mule.runtime.app.declaration.api.fluent.SimpleValueType.NUMBER;
 import org.mule.runtime.app.declaration.api.ArtifactDeclaration;
 import org.mule.runtime.app.declaration.api.ConfigurationElementDeclaration;
 import org.mule.runtime.app.declaration.api.ConnectionElementDeclaration;
@@ -15,8 +16,11 @@ import org.mule.runtime.app.declaration.api.OperationElementDeclaration;
 import org.mule.runtime.app.declaration.api.ParameterValue;
 import org.mule.runtime.app.declaration.api.SourceElementDeclaration;
 import org.mule.runtime.app.declaration.api.fluent.ElementDeclarer;
+import org.mule.runtime.app.declaration.api.fluent.ParameterListValue;
 import org.mule.runtime.app.declaration.api.fluent.ParameterObjectValue;
 import org.mule.runtime.app.declaration.api.fluent.ParameterSimpleValue;
+
+import java.util.List;
 
 public interface TestExtensionAware {
 
@@ -26,6 +30,7 @@ public interface TestExtensionAware {
 
   String PROVIDED_PARAMETER_NAME = "providedParameter";
   String ACTING_PARAMETER_NAME = "actingParameter";
+  String METADATA_KEY_PARAMETER_NAME = "metadataKey";
 
   String SOURCE_ELEMENT_NAME = "simple";
   String INDEPENDENT_SOURCE_PARAMETER_NAME = "independentParam";
@@ -36,6 +41,7 @@ public interface TestExtensionAware {
   String CONFIG_LESS_OP_ELEMENT_NAME = "configLessOP";
   String ACTING_PARAMETER_OP_ELEMENT_NAME = "actingParameterOP";
   String COMPLEX_ACTING_PARAMETER_OP_ELEMENT_NAME = "complexActingParameterOP";
+  String ACTING_PARAMETER_GROUP_OP_ELEMENT_NAME = "actingParameterGroupOP";
 
   String CONNECTION_CLIENT_NAME_PARAMETER = "clientName";
 
@@ -60,9 +66,6 @@ public interface TestExtensionAware {
     return TEST_EXTENSION_DECLARER
         .newOperation(CONFIG_LESS_CONNECTION_LESS_OP_ELEMENT_NAME)
         .withConfig(configName)
-        .withParameterGroup(newParameterGroup()
-            .withParameter(PROVIDED_PARAMETER_NAME, "")
-            .getDeclaration())
         .getDeclaration();
 
   }
@@ -71,9 +74,6 @@ public interface TestExtensionAware {
     return TEST_EXTENSION_DECLARER
         .newOperation(CONFIG_LESS_OP_ELEMENT_NAME)
         .withConfig(configName)
-        .withParameterGroup(newParameterGroup()
-            .withParameter(PROVIDED_PARAMETER_NAME, "")
-            .getDeclaration())
         .getDeclaration();
 
   }
@@ -84,7 +84,6 @@ public interface TestExtensionAware {
         .withConfig(configName)
         .withParameterGroup(newParameterGroup()
             .withParameter(ACTING_PARAMETER_NAME, actingParameter)
-            .withParameter(PROVIDED_PARAMETER_NAME, "")
             .getDeclaration())
         .getDeclaration();
 
@@ -101,11 +100,29 @@ public interface TestExtensionAware {
         .withConfig(configName)
         .withParameterGroup(newParameterGroup()
             .withParameter(ACTING_PARAMETER_NAME, actingParameter)
-            .withParameter(PROVIDED_PARAMETER_NAME, "")
             .getDeclaration())
         .getDeclaration();
 
   }
+
+  default OperationElementDeclaration actingParameterGroupOPDeclaration(String configName,
+                                                                        String stringValue,
+                                                                        int intValue,
+                                                                        List<String> listValue) {
+    final ParameterListValue.Builder listBuilder = ParameterListValue.builder();
+    listValue.forEach(listBuilder::withValue);
+    return TEST_EXTENSION_DECLARER
+        .newOperation(ACTING_PARAMETER_GROUP_OP_ELEMENT_NAME)
+        .withConfig(configName)
+        .withParameterGroup(newParameterGroup("Acting")
+            .withParameter("stringParam", stringValue)
+            .withParameter("intParam", ParameterSimpleValue.of(String.valueOf(intValue), NUMBER))
+            .withParameter("listParams", listBuilder.build())
+            .getDeclaration())
+        .getDeclaration();
+
+  }
+
 
   default SourceElementDeclaration sourceDeclaration(String configName, String actingParameter) {
     return TEST_EXTENSION_DECLARER
