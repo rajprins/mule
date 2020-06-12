@@ -6,6 +6,7 @@
  */
 package org.mule.runtime.module.tooling;
 
+import static java.util.Arrays.asList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
@@ -90,6 +91,7 @@ public class DataProviderServiceTestCase extends AbstractFakeMuleServerTestCase 
     };
 
     validateResult(providerResult.getResult(), "ActingParameterVP", failureValidator);
+    validateResult(providerResult.getResult(), "ActingParameterGroupVP", failureValidator);
     validateResult(providerResult.getResult(), "ConfigLessConnectionLessNoActingParamVP", r -> {
       assertThat(r.isSuccessful(), is(true));
       assertThat(r.getData(), hasSize(1));
@@ -143,12 +145,13 @@ public class DataProviderServiceTestCase extends AbstractFakeMuleServerTestCase 
   }
 
   @Test
-  public void complexActingParameterOnOperation() {
-    final String innerPojoParam = "innerPojoParm";
-    final String actingParameterParam = "actingParameterParam";
+  public void actingParameterGroup() {
+    final String stringValue = "stringValue";
+    final int intValue = 0;
+    final List<String> listValue = asList("one", "two", "three");
     ComponentElementDeclaration elementDeclaration =
-        complexActingParameterOPDeclaration(CONFIG_NAME, actingParameterParam, innerPojoParam);
-    getResultAndValidate(elementDeclaration, PROVIDED_PARAMETER_NAME, "");
+        actingParameterGroupOPDeclaration(CONFIG_NAME, stringValue, intValue, listValue);
+    getResultAndValidate(elementDeclaration, PROVIDED_PARAMETER_NAME, "stringValue-0-one-two-three");
   }
 
   private void getResultAndValidate(ComponentElementDeclaration elementDeclaration, String parameterName, String expectedValue) {

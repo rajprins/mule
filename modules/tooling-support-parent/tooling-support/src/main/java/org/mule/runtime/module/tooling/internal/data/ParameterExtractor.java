@@ -12,6 +12,7 @@ import org.mule.runtime.app.declaration.api.ParameterValueVisitor;
 import org.mule.runtime.app.declaration.api.fluent.ParameterListValue;
 import org.mule.runtime.app.declaration.api.fluent.ParameterObjectValue;
 import org.mule.runtime.app.declaration.api.fluent.ParameterSimpleValue;
+import org.mule.runtime.app.declaration.api.fluent.SimpleValueType;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -30,7 +31,24 @@ public class ParameterExtractor implements ParameterValueVisitor {
 
   @Override
   public void visitSimpleValue(ParameterSimpleValue text) {
-    this.value = text.getValue();
+    SimpleValueType valueType = text.getType();
+    String value = text.getValue();
+    if (valueType != null) {
+      switch (valueType) {
+        case BOOLEAN:
+          this.value = Boolean.valueOf(value);
+          break;
+        case NUMBER:
+          this.value = Integer.valueOf(value);
+          break;
+        default:
+          this.value = value;
+          break;
+      }
+
+    } else {
+      this.value = value;
+    }
   }
 
   @Override
