@@ -141,7 +141,7 @@ public class DataProviderServiceTestCase extends AbstractFakeMuleServerTestCase 
   public void actingParameterOnOperation() {
     final String actingParameter = "actingParameter";
     ComponentElementDeclaration elementDeclaration = actingParameterOPDeclaration(CONFIG_NAME, actingParameter);
-    getResultAndValidate(elementDeclaration, PROVIDED_PARAMETER_NAME, actingParameter);
+    getResultAndValidate(elementDeclaration, PROVIDED_PARAMETER_NAME, "FROM-ACTING-" + actingParameter);
   }
 
   @Test
@@ -151,6 +151,12 @@ public class DataProviderServiceTestCase extends AbstractFakeMuleServerTestCase 
     final List<String> listValue = asList("one", "two", "three");
     ComponentElementDeclaration elementDeclaration =
         actingParameterGroupOPDeclaration(CONFIG_NAME, stringValue, intValue, listValue);
+    getResultAndValidate(elementDeclaration, PROVIDED_PARAMETER_NAME, "stringValue-0-one-two-three");
+  }
+
+  @Test
+  public void nestedProvidedParameters() {
+    ComponentElementDeclaration elementDeclaration = nestedVPsOPDeclaration(CONFIG_NAME);
     getResultAndValidate(elementDeclaration, PROVIDED_PARAMETER_NAME, "stringValue-0-one-two-three");
   }
 
