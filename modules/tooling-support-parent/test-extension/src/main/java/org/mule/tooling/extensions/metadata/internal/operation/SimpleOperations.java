@@ -19,6 +19,7 @@ import org.mule.tooling.extensions.metadata.internal.value.ActingParameterVP;
 import org.mule.tooling.extensions.metadata.internal.value.ComplexActingParameterVP;
 import org.mule.tooling.extensions.metadata.internal.value.ConfigLessConnectionLessNoActingParamVP;
 import org.mule.tooling.extensions.metadata.internal.value.ConfigLessNoActingParamVP;
+import org.mule.tooling.extensions.metadata.internal.value.MultipleValuesSimpleVP;
 
 public class SimpleOperations {
 
@@ -56,6 +57,13 @@ public class SimpleOperations {
                                                      @Connection TstExtensionClient client,
                                                      @ParameterGroup(name = "Acting") ActingParameterGroup actingParameterGroup,
                                                      @Optional @OfValues(ActingParameterGroupVP.class) String providedParameter) {
+    return null;
+  }
+
+  public Result<Void, Object> nestedVPsOperation(@Config SimpleConfiguration configuration,
+                                                 @Connection TstExtensionClient client,
+                                                 @Optional @OfValues(MultipleValuesSimpleVP.class) String actingParameter,
+                                                 @Optional @OfValues(ActingParameterVP.class) String providedParameter) {
     return null;
   }
 }

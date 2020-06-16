@@ -6,77 +6,74 @@
  */
 package org.mule.runtime.module.tooling.internal.data;
 
+import static com.google.common.collect.Sets.cartesianProduct;
+import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptySet;
-import static java.util.Optional.empty;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static org.mule.runtime.api.i18n.I18nMessageFactory.createStaticMessage;
 import static org.mule.runtime.api.value.ResolvingFailure.Builder.newFailure;
 import static org.mule.runtime.core.internal.event.NullEventFactory.getNullEvent;
 import static org.mule.runtime.extension.api.metadata.NullMetadataResolver.NULL_CATEGORY_NAME;
+import static org.mule.runtime.extension.api.values.ValueResolvingException.MISSING_REQUIRED_PARAMETERS;
 import static org.mule.runtime.module.extension.internal.util.MuleExtensionUtils.getClassLoader;
 import static org.mule.runtime.module.tooling.internal.data.DefaultDataProviderResult.success;
 import static org.mule.runtime.module.tooling.internal.data.DefaultDataValue.fromKeys;
 import static org.mule.runtime.module.tooling.internal.data.DefaultDataValue.fromValues;
 import static org.mule.runtime.module.tooling.internal.data.NoOpMetadataCache.getNoOpCache;
 import static org.mule.runtime.module.tooling.internal.data.ParameterExtractor.extractValue;
-import org.mule.runtime.api.component.Component;
+import static org.mule.runtime.module.tooling.internal.data.StaticParameterValueResolver.multipleParametersStaticResolver;
 import org.mule.runtime.api.component.location.ConfigurationComponentLocator;
-import org.mule.runtime.api.exception.MuleException;
 import org.mule.runtime.api.exception.MuleRuntimeException;
 import org.mule.runtime.api.meta.model.ComponentModel;
 import org.mule.runtime.api.meta.model.config.ConfigurationModel;
+import org.mule.runtime.api.meta.model.parameter.ParameterModel;
 import org.mule.runtime.api.meta.model.parameter.ParameterizedModel;
+import org.mule.runtime.api.meta.model.parameter.ValueProviderModel;
 import org.mule.runtime.api.metadata.MetadataContext;
 import org.mule.runtime.api.metadata.MetadataKeysContainer;
 import org.mule.runtime.api.metadata.resolving.MetadataResult;
 import org.mule.runtime.api.util.LazyValue;
-import org.mule.runtime.api.util.Reference;
 import org.mule.runtime.app.declaration.api.ArtifactDeclaration;
 import org.mule.runtime.app.declaration.api.ComponentElementDeclaration;
-import org.mule.runtime.app.declaration.api.ParameterValue;
-import org.mule.runtime.app.declaration.api.ParameterValueVisitor;
-import org.mule.runtime.app.declaration.api.fluent.ParameterListValue;
-import org.mule.runtime.app.declaration.api.fluent.ParameterObjectValue;
-import org.mule.runtime.app.declaration.api.fluent.ParameterSimpleValue;
 import org.mule.runtime.core.api.MuleContext;
 import org.mule.runtime.core.api.config.ConfigurationException;
 import org.mule.runtime.core.api.connector.ConnectionManager;
 import org.mule.runtime.core.api.el.ExpressionManager;
 import org.mule.runtime.core.api.extension.ExtensionManager;
-import org.mule.runtime.core.api.transaction.TransactionConfig;
 import org.mule.runtime.extension.api.declaration.type.ExtensionsTypeLoaderFactory;
 import org.mule.runtime.extension.api.property.MetadataKeyIdModelProperty;
 import org.mule.runtime.extension.api.runtime.config.ConfigurationInstance;
-import org.mule.runtime.extension.api.runtime.operation.ExecutionContext;
 import org.mule.runtime.extension.api.values.ValueResolvingException;
 import org.mule.runtime.module.extension.internal.loader.java.property.ValueProviderFactoryModelProperty;
 import org.mule.runtime.module.extension.internal.metadata.DefaultMetadataContext;
 import org.mule.runtime.module.extension.internal.metadata.MetadataMediator;
-import org.mule.runtime.module.extension.internal.runtime.DefaultExecutionContext;
 import org.mule.runtime.module.extension.internal.runtime.config.ResolverSetBasedParameterResolver;
-import org.mule.runtime.module.extension.internal.runtime.operation.OperationParameterValueResolver;
 import org.mule.runtime.module.extension.internal.runtime.resolver.ParameterValueResolver;
 import org.mule.runtime.module.extension.internal.runtime.resolver.ParametersResolver;
 import org.mule.runtime.module.extension.internal.runtime.resolver.ResolverSet;
-import org.mule.runtime.module.extension.internal.runtime.resolver.StaticValueResolver;
-import org.mule.runtime.module.extension.internal.runtime.resolver.ValueResolver;
 import org.mule.runtime.module.extension.internal.util.ReflectionCache;
 import org.mule.runtime.module.extension.internal.value.ValueProviderMediator;
 import org.mule.runtime.module.tooling.api.data.DataProviderResult;
 import org.mule.runtime.module.tooling.api.data.DataProviderService;
 import org.mule.runtime.module.tooling.api.data.DataResult;
+import org.mule.runtime.module.tooling.api.data.DataValue;
 import org.mule.runtime.module.tooling.internal.utils.ArtifactHelper;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 
@@ -143,15 +140,15 @@ public class InternalDataProviderService implements DataProviderService {
         .map(r -> r.get(0))
         .orElseGet(() -> {
           ValueProviderMediator<T> valueProviderMediator = createValueProviderMediator(componentModel);
-          final String resolveName = getResolverName(componentModel, parameterName);
+          final String resolverName = getResolverName(componentModel, parameterName);
           try {
-            return new DefaultDataResult(resolveName,
+            return new DefaultDataResult(resolverName,
                                          fromValues(valueProviderMediator.getValues(parameterName,
                                                                                     parameterValueResolver,
                                                                                     connectionSupplier(),
                                                                                     () -> null)));
           } catch (ValueResolvingException e) {
-            return new DefaultDataResult(resolveName,
+            return new DefaultDataResult(resolverName,
                                          newFailure(e).build());
           }
         });
@@ -166,11 +163,61 @@ public class InternalDataProviderService implements DataProviderService {
   }
 
   private <T extends ComponentModel> List<DataResult> resolveValues(T model) {
-    return model.getAllParameterModels()
+    final Map<String, DataResult> resolvedParameters = new HashMap<>();
+    model.getAllParameterModels()
         .stream()
         .filter(pm -> pm.getValueProviderModel().isPresent())
-        .map(vpp -> discoverParameterValues(model, vpp.getName(), null))
-        .collect(toList());
+        .sorted(ResolvableParametersComparator.get())
+        .forEach(vpp -> {
+          final List<String> actingParameters = vpp.getValueProviderModel().get().getActingParameters();
+          if (actingParameters.isEmpty()) {
+            resolvedParameters.put(vpp.getName(), discoverParameterValues(model, vpp.getName(), null));
+          }
+          DataResult result;
+          final String resolverName = getResolverName(model, vpp.getName());
+          try {
+            result = new DefaultDataResult(resolverName,
+                                           allActingParametersCombinations(actingParameters, resolvedParameters)
+                                               .stream()
+                                               .map(actingParametersResolver -> discoverParameterValues(model, vpp
+                                                   .getName(), actingParametersResolver))
+                                               .flatMap(dataResult -> dataResult.getData().stream())
+                                               .collect(toSet()));
+          } catch (ValueResolvingException e) {
+            result = new DefaultDataResult(resolverName,
+                                           newFailure(e).build());
+          }
+          resolvedParameters.put(vpp.getName(), result);
+
+        });
+    return new ArrayList<>(resolvedParameters.values());
+  }
+
+  private List<ParameterValueResolver> allActingParametersCombinations(List<String> requiredParameters,
+                                                                       Map<String, DataResult> resolved)
+      throws ValueResolvingException {
+    if (requiredParameters.stream().allMatch(p -> resolved.containsKey(p) && resolved.get(p).isSuccessful())) {
+      final List<Set<String>> allResults = requiredParameters.stream().map(resolved::get)
+          .map(r -> r.getData().stream().map(DataValue::getId).collect(toSet())).collect(toList());
+      return cartesianProduct(allResults).stream().map(comb -> multipleParametersStaticResolver(toMap(requiredParameters, comb)))
+          .collect(toList());
+
+    }
+    throw new ValueResolvingException("Cant resolve parameters if acting parameters resolution failed or they are missing",
+                                      MISSING_REQUIRED_PARAMETERS);
+  }
+
+  private <K, V> Map<K, V> toMap(Collection<K> keys, Collection<V> values) {
+    final Map<K, V> map = new HashMap<>();
+    if (keys.size() != values.size()) {
+      throw new MuleRuntimeException(createStaticMessage("Expected collections of same size"));
+    }
+    Iterator<K> keysIterator = keys.iterator();
+    Iterator<V> valuesIterator = values.iterator();
+    while (keysIterator.hasNext() && valuesIterator.hasNext()) {
+      map.put(keysIterator.next(), valuesIterator.next());
+    }
+    return map;
   }
 
   private <T extends ComponentModel> List<DataResult> resolveMetadataKeys(T model, Predicate<String> categoryFilter) {
@@ -245,6 +292,30 @@ public class InternalDataProviderService implements DataProviderService {
       return new ResolverSetBasedParameterResolver(resolverSet, model, reflectionCache, expressionManager);
     } catch (ConfigurationException e) {
       throw new MuleRuntimeException(e);
+    }
+  }
+
+  private static class ResolvableParametersComparator implements Comparator<ParameterModel> {
+
+    private static final Comparator<ParameterModel> instance = new ResolvableParametersComparator();
+
+    private static Comparator<ParameterModel> get() {
+      return instance;
+    }
+
+    @Override
+    public int compare(ParameterModel pm1, ParameterModel pm2) {
+      //Since we are working with resolvable parameters, they all should have a value provide model
+      final ValueProviderModel vpm1 = pm1.getValueProviderModel().get();
+      final ValueProviderModel vpm2 = pm2.getValueProviderModel().get();
+
+      if (vpm1.getActingParameters().contains(pm2.getName())) {
+        return 1;
+      }
+      if (vpm2.getActingParameters().contains(pm1.getName())) {
+        return -1;
+      }
+      return 0;
     }
   }
 

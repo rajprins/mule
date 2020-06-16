@@ -42,6 +42,7 @@ public interface TestExtensionAware {
   String ACTING_PARAMETER_OP_ELEMENT_NAME = "actingParameterOP";
   String COMPLEX_ACTING_PARAMETER_OP_ELEMENT_NAME = "complexActingParameterOP";
   String ACTING_PARAMETER_GROUP_OP_ELEMENT_NAME = "actingParameterGroupOP";
+  String NESTED_PARAMETERS_OP_ELEMENT_NAME = "nestedVPsOperation";
 
   String CONNECTION_CLIENT_NAME_PARAMETER = "clientName";
 
@@ -119,6 +120,14 @@ public interface TestExtensionAware {
             .withParameter("intParam", ParameterSimpleValue.of(String.valueOf(intValue), NUMBER))
             .withParameter("listParams", listBuilder.build())
             .getDeclaration())
+        .getDeclaration();
+
+  }
+
+  default OperationElementDeclaration nestedVPsOPDeclaration(String configName) {
+    return TEST_EXTENSION_DECLARER
+        .newOperation(NESTED_PARAMETERS_OP_ELEMENT_NAME)
+        .withConfig(configName)
         .getDeclaration();
 
   }
