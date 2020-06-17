@@ -7,7 +7,11 @@
 package org.mule.runtime.module.tooling;
 
 import static java.util.Arrays.asList;
+import static java.util.stream.Collectors.toSet;
+import static junit.framework.TestCase.fail;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
@@ -22,12 +26,15 @@ import org.mule.runtime.app.declaration.api.ArtifactDeclaration;
 import org.mule.runtime.module.tooling.api.ArtifactAgnosticServiceBuilder;
 import org.mule.runtime.module.tooling.api.ToolingService;
 import org.mule.runtime.module.tooling.api.data.DataResult;
+import org.mule.runtime.module.tooling.api.data.DataValue;
 import org.mule.tck.junit4.rule.SystemProperty;
 import org.mule.test.infrastructure.deployment.AbstractFakeMuleServerTestCase;
 
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import org.junit.ClassRule;
 import org.junit.Rule;
@@ -90,8 +97,75 @@ public class DataProviderServiceTestCase extends AbstractFakeMuleServerTestCase 
       totalValidations.incrementAndGet();
     };
 
-    validateResult(providerResult.getResult(), "ActingParameterVP", failureValidator);
+    //TODO: FIX THIS, WE SHOULD BE ABLE TO DISTINGUISH VALUE PROVIDERS ACCORDING TO THEIR ACTING PARAMETERS
+    validateResult(providerResult.getResult(), "ActingParameterVP", r -> {
+      if (r.isSuccessful()) {
+        Set<String> results = r.getData().stream().map(DataValue::getId).collect(toSet());
+        if (r.getData().size() == 3) {
+          assertThat(results, containsInAnyOrder(expectedParameter("ONE"), expectedParameter("TWO"), expectedParameter("THREE")));
+          totalValidations.incrementAndGet();
+        } else {
+          fail();
+        }
+      } else {
+        failureValidator.accept(r);
+      }
+    });
     validateResult(providerResult.getResult(), "ActingParameterGroupVP", failureValidator);
+    validateResult(providerResult.getResult(), "LevelTwoVP", r -> {
+      assertThat(r.isSuccessful(), is(true));
+      Set<String> results = r.getData().stream().map(DataValue::getId).collect(toSet());
+      assertThat(results, containsInAnyOrder("LEVEL-TWO-ONE-ONE",
+                                             "LEVEL-TWO-ONE-TWO",
+                                             "LEVEL-TWO-ONE-THREE",
+                                             "LEVEL-TWO-TWO-ONE",
+                                             "LEVEL-TWO-TWO-TWO",
+                                             "LEVEL-TWO-TWO-THREE",
+                                             "LEVEL-TWO-THREE-ONE",
+                                             "LEVEL-TWO-THREE-TWO",
+                                             "LEVEL-TWO-THREE-THREE"));
+      totalValidations.incrementAndGet();
+    });
+    validateResult(providerResult.getResult(), "LevelThreeVP", r -> {
+      assertThat(r.isSuccessful(), is(true));
+      Set<String> results = r.getData().stream().map(DataValue::getId).collect(toSet());
+      assertThat(results, containsInAnyOrder("LEVEL-THREE-ONE-LEVEL-TWO-ONE-ONE",
+                                             "LEVEL-THREE-ONE-LEVEL-TWO-ONE-TWO",
+                                             "LEVEL-THREE-ONE-LEVEL-TWO-ONE-THREE",
+                                             "LEVEL-THREE-ONE-LEVEL-TWO-TWO-ONE",
+                                             "LEVEL-THREE-ONE-LEVEL-TWO-TWO-TWO",
+                                             "LEVEL-THREE-ONE-LEVEL-TWO-TWO-THREE",
+                                             "LEVEL-THREE-ONE-LEVEL-TWO-THREE-ONE",
+                                             "LEVEL-THREE-ONE-LEVEL-TWO-THREE-TWO",
+                                             "LEVEL-THREE-ONE-LEVEL-TWO-THREE-THREE",
+
+                                             "LEVEL-THREE-TWO-LEVEL-TWO-ONE-ONE",
+                                             "LEVEL-THREE-TWO-LEVEL-TWO-ONE-TWO",
+                                             "LEVEL-THREE-TWO-LEVEL-TWO-ONE-THREE",
+                                             "LEVEL-THREE-TWO-LEVEL-TWO-TWO-ONE",
+                                             "LEVEL-THREE-TWO-LEVEL-TWO-TWO-TWO",
+                                             "LEVEL-THREE-TWO-LEVEL-TWO-TWO-THREE",
+                                             "LEVEL-THREE-TWO-LEVEL-TWO-THREE-ONE",
+                                             "LEVEL-THREE-TWO-LEVEL-TWO-THREE-TWO",
+                                             "LEVEL-THREE-TWO-LEVEL-TWO-THREE-THREE",
+
+                                             "LEVEL-THREE-THREE-LEVEL-TWO-ONE-ONE",
+                                             "LEVEL-THREE-THREE-LEVEL-TWO-ONE-TWO",
+                                             "LEVEL-THREE-THREE-LEVEL-TWO-ONE-THREE",
+                                             "LEVEL-THREE-THREE-LEVEL-TWO-TWO-ONE",
+                                             "LEVEL-THREE-THREE-LEVEL-TWO-TWO-TWO",
+                                             "LEVEL-THREE-THREE-LEVEL-TWO-TWO-THREE",
+                                             "LEVEL-THREE-THREE-LEVEL-TWO-THREE-ONE",
+                                             "LEVEL-THREE-THREE-LEVEL-TWO-THREE-TWO",
+                                             "LEVEL-THREE-THREE-LEVEL-TWO-THREE-THREE"));
+      totalValidations.incrementAndGet();
+    });
+    validateResult(providerResult.getResult(), "MultipleValuesSimpleVP", r -> {
+      assertThat(r.isSuccessful(), is(true));
+      Set<String> results = r.getData().stream().map(DataValue::getId).collect(toSet());
+      assertThat(results, containsInAnyOrder("ONE", "TWO", "THREE"));
+      totalValidations.incrementAndGet();
+    });
     validateResult(providerResult.getResult(), "ConfigLessConnectionLessNoActingParamVP", r -> {
       assertThat(r.isSuccessful(), is(true));
       assertThat(r.getData(), hasSize(1));
@@ -123,6 +197,10 @@ public class DataProviderServiceTestCase extends AbstractFakeMuleServerTestCase 
     results.stream().filter(r -> r.getResolverName().equals(resolverName)).forEach(validator);
   }
 
+  private String expectedParameter(String actingParameter) {
+    return "WITH-ACTING-PARAMETER-" + actingParameter;
+  }
+
   @Test
   public void configLessConnectionLessOnOperation() {
     ComponentElementDeclaration elementDeclaration = configLessConnectionLessOPDeclaration(CONFIG_NAME);
@@ -141,7 +219,7 @@ public class DataProviderServiceTestCase extends AbstractFakeMuleServerTestCase 
   public void actingParameterOnOperation() {
     final String actingParameter = "actingParameter";
     ComponentElementDeclaration elementDeclaration = actingParameterOPDeclaration(CONFIG_NAME, actingParameter);
-    getResultAndValidate(elementDeclaration, PROVIDED_PARAMETER_NAME, "FROM-ACTING-" + actingParameter);
+    getResultAndValidate(elementDeclaration, PROVIDED_PARAMETER_NAME, expectedParameter(actingParameter));
   }
 
   @Test
@@ -151,12 +229,6 @@ public class DataProviderServiceTestCase extends AbstractFakeMuleServerTestCase 
     final List<String> listValue = asList("one", "two", "three");
     ComponentElementDeclaration elementDeclaration =
         actingParameterGroupOPDeclaration(CONFIG_NAME, stringValue, intValue, listValue);
-    getResultAndValidate(elementDeclaration, PROVIDED_PARAMETER_NAME, "stringValue-0-one-two-three");
-  }
-
-  @Test
-  public void nestedProvidedParameters() {
-    ComponentElementDeclaration elementDeclaration = nestedVPsOPDeclaration(CONFIG_NAME);
     getResultAndValidate(elementDeclaration, PROVIDED_PARAMETER_NAME, "stringValue-0-one-two-three");
   }
 
