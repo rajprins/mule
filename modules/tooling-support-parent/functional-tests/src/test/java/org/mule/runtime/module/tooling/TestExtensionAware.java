@@ -43,6 +43,7 @@ public interface TestExtensionAware {
   String COMPLEX_ACTING_PARAMETER_OP_ELEMENT_NAME = "complexActingParameterOP";
   String ACTING_PARAMETER_GROUP_OP_ELEMENT_NAME = "actingParameterGroupOP";
   String NESTED_PARAMETERS_OP_ELEMENT_NAME = "nestedVPsOperation";
+  String MULTIPLE_NESTED_PARAMETERS_OP_ELEMENT_NAME = "multipleNestedVPsOperation";
 
   String CONNECTION_CLIENT_NAME_PARAMETER = "clientName";
 
@@ -130,6 +131,13 @@ public interface TestExtensionAware {
         .withConfig(configName)
         .getDeclaration();
 
+  }
+
+  default OperationElementDeclaration multipleNestedVPsOPDeclaration(String configName) {
+    return TEST_EXTENSION_DECLARER
+        .newOperation(MULTIPLE_NESTED_PARAMETERS_OP_ELEMENT_NAME)
+        .withConfig(configName)
+        .getDeclaration();
   }
 
 
