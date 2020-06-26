@@ -7,7 +7,6 @@
 package org.mule.runtime.module.tooling.internal;
 
 import static com.google.common.base.Throwables.getCausalChain;
-import static org.mule.runtime.core.api.util.ClassUtils.withContextClassLoader;
 import static org.mule.runtime.core.api.util.FileUtils.deleteTree;
 import org.mule.runtime.api.exception.MuleRuntimeException;
 import org.mule.runtime.deployment.model.api.application.Application;

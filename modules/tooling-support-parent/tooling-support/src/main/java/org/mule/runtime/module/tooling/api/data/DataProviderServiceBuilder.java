@@ -6,8 +6,12 @@
  */
 package org.mule.runtime.module.tooling.api.data;
 
+import org.mule.runtime.app.declaration.api.ConfigurationElementDeclaration;
 import org.mule.runtime.module.tooling.api.ArtifactAgnosticServiceBuilder;
 
 public interface DataProviderServiceBuilder
     extends ArtifactAgnosticServiceBuilder<DataProviderServiceBuilder, DataProviderService> {
+
+  DataProviderServiceBuilder withConfigurationDeclaration(ConfigurationElementDeclaration configurationDeclaration);
+
 }

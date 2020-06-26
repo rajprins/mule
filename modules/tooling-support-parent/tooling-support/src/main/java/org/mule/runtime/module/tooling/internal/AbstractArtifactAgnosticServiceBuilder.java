@@ -26,7 +26,6 @@ import org.mule.runtime.module.artifact.api.descriptor.BundleDescriptor;
 import org.mule.runtime.module.deployment.impl.internal.application.DefaultApplicationFactory;
 import org.mule.runtime.module.deployment.impl.internal.application.DeployableMavenClassLoaderModelLoader;
 import org.mule.runtime.module.tooling.api.ArtifactAgnosticServiceBuilder;
-import org.mule.runtime.module.tooling.api.connectivity.ConnectivityTestingServiceBuilder;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -44,7 +43,6 @@ public abstract class AbstractArtifactAgnosticServiceBuilder<T extends ArtifactA
 
   private final DefaultApplicationFactory defaultApplicationFactory;
   private Model model;
-  private ArtifactDeclaration artifactDeclaration;
 
   protected AbstractArtifactAgnosticServiceBuilder(DefaultApplicationFactory defaultApplicationFactory) {
     this.defaultApplicationFactory = defaultApplicationFactory;
@@ -71,13 +69,8 @@ public abstract class AbstractArtifactAgnosticServiceBuilder<T extends ArtifactA
   }
 
   @Override
-  public T setArtifactDeclaration(ArtifactDeclaration artifactDeclaration) {
-    this.artifactDeclaration = artifactDeclaration;
-    return getThis();
-  }
-
-  @Override
   public S build() {
+    final ArtifactDeclaration artifactDeclaration = getArtifactDeclaration();
     checkState(artifactDeclaration != null, "artifact configuration cannot be null");
     return createService(() -> {
       String applicationName = UUID.getUUID() + "-connectivity-testing-temp-app";
@@ -101,6 +94,8 @@ public abstract class AbstractArtifactAgnosticServiceBuilder<T extends ArtifactA
   }
 
   protected abstract S createService(ApplicationSupplier applicationSupplier);
+
+  protected abstract ArtifactDeclaration getArtifactDeclaration();
 
 
   private void createTempMavenModel() {

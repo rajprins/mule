@@ -31,14 +31,6 @@ public interface ArtifactAgnosticServiceBuilder<T extends ArtifactAgnosticServic
   T addDependency(String groupId, String artifactId, String artifactVersion, String classifier, String type);
 
   /**
-   * Configures the mule components required to execute the service
-   *
-   * @param artifactDeclaration set of mule components required execute service
-   * @return the builder
-   */
-  T setArtifactDeclaration(ArtifactDeclaration artifactDeclaration);
-
-  /**
    * Creates a {@code S service} with the provided configuration
    *
    * @return the created service

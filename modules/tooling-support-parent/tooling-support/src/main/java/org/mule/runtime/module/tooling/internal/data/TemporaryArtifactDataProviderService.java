@@ -8,9 +8,11 @@ package org.mule.runtime.module.tooling.internal.data;
 
 import static org.mule.runtime.api.i18n.I18nMessageFactory.createStaticMessage;
 import static org.mule.runtime.api.value.ResolvingFailure.Builder.newFailure;
+import static org.mule.runtime.api.value.ValueResult.resultFrom;
 import static org.mule.runtime.module.tooling.internal.data.DefaultDataProviderResult.failure;
 import org.mule.runtime.api.exception.MuleException;
 import org.mule.runtime.api.exception.MuleRuntimeException;
+import org.mule.runtime.api.value.ValueResult;
 import org.mule.runtime.core.api.MuleContext;
 import org.mule.runtime.module.tooling.api.data.DataProviderResult;
 import org.mule.runtime.module.tooling.api.data.DataProviderService;
@@ -52,10 +54,9 @@ public class TemporaryArtifactDataProviderService extends AbstractArtifactAgnost
   }
 
   @Override
-  public DataProviderResult<DataResult> getValues(ComponentElementDeclaration component, String parameterName) {
-    return withTemporaryApplication(
-                                    app -> withServiceFrom(app).getValues(component, parameterName),
-                                    err -> failure(newFailure(err).build()));
+  public ValueResult getValues(ComponentElementDeclaration component, String parameterName) {
+    return withTemporaryApplication(app -> withServiceFrom(app).getValues(component, parameterName),
+                                    err -> resultFrom(newFailure(err).build()));
   }
 
 
