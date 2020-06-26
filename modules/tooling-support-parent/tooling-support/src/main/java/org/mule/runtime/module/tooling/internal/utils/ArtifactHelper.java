@@ -125,7 +125,7 @@ public class ArtifactHelper {
   }
 
   public Optional<Object> getConnectionInstance() {
-    return findConnectionProvider().map(c -> handlingException(() -> c.connect()));
+    return findConnectionProvider().map(c -> handlingException((CheckedSupplier<Object>) c::connect));
   }
 
   private <T> T handlingException(CheckedSupplier<T> supplier, String... errorMessage) {

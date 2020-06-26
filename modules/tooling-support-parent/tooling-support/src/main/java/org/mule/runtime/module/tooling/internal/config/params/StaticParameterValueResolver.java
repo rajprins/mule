@@ -4,9 +4,8 @@
  * license, a copy of which has been included with this distribution in the
  * LICENSE.txt file.
  */
-package org.mule.runtime.module.tooling.internal.data;
+package org.mule.runtime.module.tooling.internal.config.params;
 
-import static java.util.Collections.singletonMap;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.stream.Collectors.toMap;
 import org.mule.runtime.api.exception.MuleException;

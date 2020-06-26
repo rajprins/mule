@@ -4,38 +4,35 @@
  * license, a copy of which has been included with this distribution in the
  * LICENSE.txt file.
  */
-package org.mule.runtime.module.tooling.internal.data;
+package org.mule.runtime.module.tooling.internal.config;
 
 import static org.mule.runtime.app.declaration.api.fluent.ElementDeclarer.newArtifact;
 import org.mule.runtime.app.declaration.api.ArtifactDeclaration;
 import org.mule.runtime.app.declaration.api.ConfigurationElementDeclaration;
-import org.mule.runtime.module.tooling.api.data.DataProviderService;
+import org.mule.runtime.module.tooling.api.config.ConfigurationService;
 import org.mule.runtime.module.deployment.impl.internal.application.DefaultApplicationFactory;
-import org.mule.runtime.module.tooling.api.data.DataProviderServiceBuilder;
+import org.mule.runtime.module.tooling.api.config.ConfigurationServiceBuilder;
 import org.mule.runtime.module.tooling.internal.AbstractArtifactAgnosticServiceBuilder;
 import org.mule.runtime.module.tooling.internal.ApplicationSupplier;
 
-public class DefaultDataProviderServiceBuilder
-    extends AbstractArtifactAgnosticServiceBuilder<DataProviderServiceBuilder, DataProviderService>
-    implements DataProviderServiceBuilder {
-
-  private static final String CONFIG_ELEMENT_NAME = "config";
-  private static final String DUMMY_CONFIG_NAME = "dummyConfig";
+public class DefaultConfigurationServiceBuilder
+    extends AbstractArtifactAgnosticServiceBuilder<ConfigurationServiceBuilder, ConfigurationService>
+    implements ConfigurationServiceBuilder {
 
   private ArtifactDeclaration artifactDeclaration;
 
-  public DefaultDataProviderServiceBuilder(DefaultApplicationFactory defaultApplicationFactory) {
+  public DefaultConfigurationServiceBuilder(DefaultApplicationFactory defaultApplicationFactory) {
     super(defaultApplicationFactory);
   }
 
   @Override
-  public DataProviderServiceBuilder withConfigurationDeclaration(ConfigurationElementDeclaration configurationDeclaration) {
+  public ConfigurationServiceBuilder withConfigurationDeclaration(ConfigurationElementDeclaration configurationDeclaration) {
     this.artifactDeclaration = newArtifact().withGlobalElement(configurationDeclaration).getDeclaration();
     return this;
   }
 
   //@Override
-  //public DataProviderServiceBuilder setConnectionDeclaration(ConnectionElementDeclaration connectionDeclaration) {
+  //public ConfigurationServiceBuilder setConnectionDeclaration(ConnectionElementDeclaration connectionDeclaration) {
   //  final String extensionName = connectionDeclaration.getDeclaringExtension();
   //  final ElementDeclarer elementDeclarer = ElementDeclarer.forExtension(extensionName);
   //  ArtifactDeclarer artifactDeclarer = newArtifact();
@@ -46,8 +43,8 @@ public class DefaultDataProviderServiceBuilder
   //}
 
   @Override
-  protected DataProviderService createService(ApplicationSupplier applicationSupplier) {
-    return new TemporaryArtifactDataProviderService(applicationSupplier);
+  protected ConfigurationService createService(ApplicationSupplier applicationSupplier) {
+    return new DefaultConfigurationService(applicationSupplier);
   }
 
   @Override

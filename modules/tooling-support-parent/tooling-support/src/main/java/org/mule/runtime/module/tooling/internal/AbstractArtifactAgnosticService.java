@@ -24,41 +24,64 @@ public class AbstractArtifactAgnosticService {
   private static final Logger LOGGER = LoggerFactory.getLogger(AbstractArtifactAgnosticService.class);
   private final ApplicationSupplier applicationSupplier;
 
+  private Application application;
+
   protected AbstractArtifactAgnosticService(ApplicationSupplier applicationSupplier) {
     this.applicationSupplier = applicationSupplier;
   }
 
-  protected <T> T withTemporaryApplication(Function<Application, T> function, Function<Exception, T> errorHandler) {
-    Application application;
-    try {
-      application = applicationSupplier.get();
-    } catch (Exception e) {
-      throw getCausalChain(e).stream()
-          .filter(exception -> exception.getClass().equals(ArtifactNotFoundException.class)
-              || exception.getClass().equals(ArtifactResolutionException.class))
-          .findFirst().map(exception -> (RuntimeException) new BundleNotFoundException(exception))
-          .orElse(new MuleRuntimeException(e));
-    }
-    try {
+  protected Application getStartedApplication() throws ApplicationStartingException {
+    if (application == null) {
+      try {
+        application = applicationSupplier.get();
+      } catch (Exception e) {
+        throw getCausalChain(e).stream()
+            .filter(exception -> exception.getClass().equals(ArtifactNotFoundException.class)
+                || exception.getClass().equals(ArtifactResolutionException.class))
+            .findFirst().map(exception -> (RuntimeException) new BundleNotFoundException(exception))
+            .orElse(new MuleRuntimeException(e));
+      }
       try {
         application.install();
         application.init();
         application.start();
       } catch (Exception e) {
-        return errorHandler.apply(e);
+        //Clean everything if there is an error
+        disposeApp();
+        throw new ApplicationStartingException(e);
       }
+    }
+    return application;
+  }
+
+  protected <T> T withTemporaryApplication(Function<Application, T> function,
+                                           Function<Exception, T> errorHandler) {
+    Application application;
+    try {
+      application = getStartedApplication();
       return function.apply(application);
+    } catch (ApplicationStartingException e) {
+      return errorHandler.apply(e.getCauseException());
     } finally {
-      if (application != null) {
-        final Application finalApplication = application;
-        doWithoutFail(finalApplication::stop);
-        doWithoutFail(finalApplication::dispose);
-        doWithoutFail(() -> deleteTree(finalApplication.getLocation()));
-      }
+      disposeApp();
     }
   }
 
-  public void doWithoutFail(Runnable runnable) {
+  protected void dispose() {
+    if (application != null) {
+      disposeApp();
+    }
+  }
+
+  private void disposeApp() {
+    final Application finalApplication = application;
+    doWithoutFail(finalApplication::stop);
+    doWithoutFail(finalApplication::dispose);
+    doWithoutFail(() -> deleteTree(finalApplication.getLocation()));
+    application = null;
+  }
+
+  private void doWithoutFail(Runnable runnable) {
     try {
       runnable.run();
     } catch (Exception e) {
@@ -66,6 +89,18 @@ public class AbstractArtifactAgnosticService {
       if (LOGGER.isDebugEnabled()) {
         LOGGER.debug(e.getMessage(), e);
       }
+    }
+  }
+
+  //Just to separate runtime vs configuration exceptions
+  protected static class ApplicationStartingException extends Exception {
+
+    private ApplicationStartingException(Exception cause) {
+      super(cause);
+    }
+
+    private Exception getCauseException() {
+      return (Exception) this.getCause();
     }
   }
 

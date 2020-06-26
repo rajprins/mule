@@ -8,8 +8,6 @@ package org.mule.runtime.module.tooling.api;
 
 import org.mule.api.annotation.NoExtend;
 import org.mule.api.annotation.NoImplement;
-import org.mule.runtime.app.declaration.api.ArtifactDeclaration;
-import org.mule.runtime.module.tooling.api.connectivity.ConnectivityTestingServiceBuilder;
 
 @NoImplement
 @NoExtend
