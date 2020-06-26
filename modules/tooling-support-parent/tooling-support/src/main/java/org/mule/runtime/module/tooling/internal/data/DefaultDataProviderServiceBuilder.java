@@ -6,6 +6,9 @@
  */
 package org.mule.runtime.module.tooling.internal.data;
 
+import static org.mule.runtime.app.declaration.api.fluent.ElementDeclarer.newArtifact;
+import org.mule.runtime.app.declaration.api.ArtifactDeclaration;
+import org.mule.runtime.app.declaration.api.ConfigurationElementDeclaration;
 import org.mule.runtime.module.tooling.api.data.DataProviderService;
 import org.mule.runtime.module.deployment.impl.internal.application.DefaultApplicationFactory;
 import org.mule.runtime.module.tooling.api.data.DataProviderServiceBuilder;
@@ -19,8 +22,16 @@ public class DefaultDataProviderServiceBuilder
   private static final String CONFIG_ELEMENT_NAME = "config";
   private static final String DUMMY_CONFIG_NAME = "dummyConfig";
 
+  private ArtifactDeclaration artifactDeclaration;
+
   public DefaultDataProviderServiceBuilder(DefaultApplicationFactory defaultApplicationFactory) {
     super(defaultApplicationFactory);
+  }
+
+  @Override
+  public DataProviderServiceBuilder withConfigurationDeclaration(ConfigurationElementDeclaration configurationDeclaration) {
+    this.artifactDeclaration = newArtifact().withGlobalElement(configurationDeclaration).getDeclaration();
+    return this;
   }
 
   //@Override
@@ -38,4 +49,10 @@ public class DefaultDataProviderServiceBuilder
   protected DataProviderService createService(ApplicationSupplier applicationSupplier) {
     return new TemporaryArtifactDataProviderService(applicationSupplier);
   }
+
+  @Override
+  protected ArtifactDeclaration getArtifactDeclaration() {
+    return this.artifactDeclaration;
+  }
+
 }
