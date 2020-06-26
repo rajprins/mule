@@ -4,7 +4,7 @@
  * license, a copy of which has been included with this distribution in the
  * LICENSE.txt file.
  */
-package org.mule.runtime.module.tooling.internal.data;
+package org.mule.runtime.module.tooling.internal.config.params;
 
 import static java.util.Collections.emptyMap;
 import org.mule.runtime.module.extension.internal.runtime.ValueResolvingException;
