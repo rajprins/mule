@@ -7,14 +7,13 @@
 package org.mule.runtime.module.tooling.internal.data;
 
 import static com.google.common.collect.Sets.cartesianProduct;
-import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptySet;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.mule.runtime.api.i18n.I18nMessageFactory.createStaticMessage;
 import static org.mule.runtime.api.value.ResolvingFailure.Builder.newFailure;
-import static org.mule.runtime.core.internal.event.NullEventFactory.getNullEvent;
+import static org.mule.runtime.api.value.ValueResult.resultFrom;
 import static org.mule.runtime.extension.api.metadata.NullMetadataResolver.NULL_CATEGORY_NAME;
 import static org.mule.runtime.extension.api.values.ValueResolvingException.MISSING_REQUIRED_PARAMETERS;
 import static org.mule.runtime.module.extension.internal.util.MuleExtensionUtils.getClassLoader;
@@ -35,6 +34,7 @@ import org.mule.runtime.api.metadata.MetadataContext;
 import org.mule.runtime.api.metadata.MetadataKeysContainer;
 import org.mule.runtime.api.metadata.resolving.MetadataResult;
 import org.mule.runtime.api.util.LazyValue;
+import org.mule.runtime.api.value.ValueResult;
 import org.mule.runtime.app.declaration.api.ArtifactDeclaration;
 import org.mule.runtime.app.declaration.api.ComponentElementDeclaration;
 import org.mule.runtime.core.api.MuleContext;
@@ -116,10 +116,11 @@ public class InternalDataProviderService implements DataProviderService {
   }
 
   @Override
-  public DataProviderResult<DataResult> getValues(ComponentElementDeclaration component, String parameterName) {
-    return success(artifactHelper().findComponentModel(component)
-        .map(cm -> discoverParameterValues(cm, parameterName, parameterValueResolver(component, cm)))
-        .orElse(new DefaultDataResult(parameterName, emptySet())));
+  public ValueResult getValues(ComponentElementDeclaration component, String parameterName) {
+    return artifactHelper()
+        .findComponentModel(component)
+        .map(cm -> discoverValues(cm, parameterName, parameterValueResolver(component, cm)))
+        .orElse(resultFrom(emptySet()));
   }
 
   private List<DataResult> discoverValuesFromConfigModel(ConfigurationModel configurationModel) {
@@ -139,20 +140,26 @@ public class InternalDataProviderService implements DataProviderService {
         .map(mp -> resolveMetadataKeys(componentModel, s -> mp.getCategoryName().map(cn -> cn.equals(s)).orElse(false)))
         .map(r -> r.get(0))
         .orElseGet(() -> {
-          ValueProviderMediator<T> valueProviderMediator = createValueProviderMediator(componentModel);
+          final ValueResult valueResult = discoverValues(componentModel, parameterName, parameterValueResolver);
           final String resolverName = getResolverName(componentModel, parameterName);
-          try {
-            return new DefaultDataResult(resolverName,
-                                         fromValues(valueProviderMediator.getValues(parameterName,
-                                                                                    parameterValueResolver,
-                                                                                    connectionSupplier(),
-                                                                                    () -> null)));
-          } catch (ValueResolvingException e) {
-            return new DefaultDataResult(resolverName,
-                                         newFailure(e).build());
+          if (valueResult.isSuccess()) {
+            return new DefaultDataResult(resolverName, fromValues(valueResult.getValues()));
           }
+          return new DefaultDataResult(resolverName, valueResult.getFailure().orElse(null));
         });
+  }
 
+  private <T extends ComponentModel> ValueResult discoverValues(T componentModel, String parameterName,
+                                                                ParameterValueResolver parameterValueResolver) {
+    ValueProviderMediator<T> valueProviderMediator = createValueProviderMediator(componentModel);
+    try {
+      return resultFrom(valueProviderMediator.getValues(parameterName,
+                                                        parameterValueResolver,
+                                                        connectionSupplier(),
+                                                        () -> null));
+    } catch (ValueResolvingException e) {
+      return resultFrom(newFailure(e).build());
+    }
   }
 
   private <T extends ComponentModel> List<DataResult> getResultsForModel(T model) {
@@ -287,7 +294,12 @@ public class InternalDataProviderService implements DataProviderService {
 
     try {
       final ResolverSet resolverSet =
-          ParametersResolver.fromValues(parametersMap, muleContext, false, reflectionCache, expressionManager)
+          ParametersResolver.fromValues(parametersMap,
+                                        muleContext,
+                                        false,
+                                        reflectionCache,
+                                        expressionManager,
+                                        model.getName())
               .getParametersAsResolverSet(model, muleContext);
       return new ResolverSetBasedParameterResolver(resolverSet, model, reflectionCache, expressionManager);
     } catch (ConfigurationException e) {

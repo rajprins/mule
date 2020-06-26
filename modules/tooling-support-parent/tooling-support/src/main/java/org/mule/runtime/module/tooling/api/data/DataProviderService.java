@@ -8,6 +8,7 @@ package org.mule.runtime.module.tooling.api.data;
 
 
 import org.mule.api.annotation.NoImplement;
+import org.mule.runtime.api.value.ValueResult;
 import org.mule.runtime.app.declaration.api.ComponentElementDeclaration;
 
 import java.util.List;
@@ -18,6 +19,6 @@ public interface DataProviderService {
 
   DataProviderResult<List<DataResult>> discover();
 
-  DataProviderResult<DataResult> getValues(ComponentElementDeclaration component, String parameterName);
+  ValueResult getValues(ComponentElementDeclaration component, String parameterName);
 
 }
