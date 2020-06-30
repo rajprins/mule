@@ -7,8 +7,10 @@
 package org.mule.runtime.module.tooling.internal.utils;
 
 import static java.util.Optional.ofNullable;
+import static org.mule.metadata.java.api.utils.JavaTypeUtils.getType;
 import static org.mule.runtime.api.i18n.I18nMessageFactory.createStaticMessage;
 import static org.mule.runtime.core.internal.event.NullEventFactory.getNullEvent;
+import static org.mule.runtime.module.extension.internal.util.MuleExtensionUtils.getClassLoader;
 import org.mule.runtime.api.component.location.ConfigurationComponentLocator;
 import org.mule.runtime.api.component.location.Location;
 import org.mule.runtime.api.connection.ConnectionProvider;
@@ -18,6 +20,7 @@ import org.mule.runtime.api.meta.model.ExtensionModel;
 import org.mule.runtime.api.meta.model.config.ConfigurationModel;
 import org.mule.runtime.api.meta.model.operation.HasOperationModels;
 import org.mule.runtime.api.meta.model.operation.OperationModel;
+import org.mule.runtime.api.meta.model.parameter.ParameterModel;
 import org.mule.runtime.api.meta.model.source.HasSourceModels;
 import org.mule.runtime.api.meta.model.source.SourceModel;
 import org.mule.runtime.api.meta.model.util.ExtensionWalker;
@@ -55,6 +58,11 @@ public class ArtifactHelper {
         .getExtension(declaration.getDeclaringExtension())
         .orElseThrow(() -> new MuleRuntimeException(createStaticMessage("Could not get extension model for: %s",
                                                                         declaration.getDeclaringExtension())));
+  }
+
+  public <T> Class<T> getParameterClass(ParameterModel parameterModel, ElementDeclaration containerDeclaration) {
+    return getType(parameterModel.getType(), getClassLoader(getExtensionModel(containerDeclaration)));
+
   }
 
   public Optional<? extends ComponentModel> findComponentModel(ElementDeclaration elementDeclaration) {

@@ -48,12 +48,12 @@ public class SimpleOperations {
     return null;
   }
 
-  //public Result<Void, Object> complexActingParameterOP(@Config SimpleConfiguration configuration,
-  //                                                     @Connection TstExtensionClient client,
-  //                                                     ActingParameter actingParameter,
-  //                                                     @Optional @OfValues(ComplexActingParameterVP.class) String providedParameter) {
-  //  return null;
-  //}
+  public Result<Void, Object> complexActingParameterOP(@Config SimpleConfiguration configuration,
+                                                       @Connection TstExtensionClient client,
+                                                       ActingParameter actingParameter,
+                                                       @Optional @OfValues(ComplexActingParameterVP.class) String providedParameter) {
+    return null;
+  }
 
   public Result<Void, Object> actingParameterGroupOP(@Config SimpleConfiguration configuration,
                                                      @Connection TstExtensionClient client,

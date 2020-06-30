@@ -220,6 +220,14 @@ public class ConfigurationServiceTestCase extends AbstractFakeMuleServerTestCase
     getResultAndValidate(elementDeclaration, PROVIDED_PARAMETER_NAME, "stringValue-0-one-two-three");
   }
 
+  @Test
+  public void complexActingParameter() {
+    final String stringValue = "stringValue";
+    ComponentElementDeclaration elementDeclaration =
+        complexActingParameterOPDeclaration(CONFIG_NAME, stringValue);
+    getResultAndValidate(elementDeclaration, PROVIDED_PARAMETER_NAME, stringValue);
+  }
+
   private void getResultAndValidate(ComponentElementDeclaration elementDeclaration, String parameterName, String expectedValue) {
     ValueResult providerResult = configurationService.getValues(elementDeclaration, parameterName);
 

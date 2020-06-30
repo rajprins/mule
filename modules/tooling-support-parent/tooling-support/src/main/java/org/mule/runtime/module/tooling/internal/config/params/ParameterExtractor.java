@@ -14,12 +14,19 @@ import org.mule.runtime.app.declaration.api.fluent.ParameterObjectValue;
 import org.mule.runtime.app.declaration.api.fluent.ParameterSimpleValue;
 import org.mule.runtime.app.declaration.api.fluent.SimpleValueType;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.util.HashMap;
 import java.util.Map;
 
 public class ParameterExtractor implements ParameterValueVisitor {
 
+  private static final ObjectMapper objectMapper = new ObjectMapper();
   private Object value;
+
+  public static <T> T extractValue(ParameterValue parameterValue, Class<T> type) {
+    return objectMapper.convertValue(extractValue(parameterValue), type);
+  }
 
   public static Object extractValue(ParameterValue parameterValue) {
     final ParameterExtractor extractor = new ParameterExtractor();
@@ -45,7 +52,6 @@ public class ParameterExtractor implements ParameterValueVisitor {
           this.value = value;
           break;
       }
-
     } else {
       this.value = value;
     }
