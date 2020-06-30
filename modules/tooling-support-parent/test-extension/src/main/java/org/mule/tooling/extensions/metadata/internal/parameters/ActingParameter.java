@@ -5,17 +5,10 @@ import org.mule.runtime.extension.api.annotation.param.Parameter;
 public class ActingParameter {
 
   @Parameter
-  private InnerPojo innerPojo;
+  private InnerActingParameter innerActingParameter;
 
-  @Parameter
-  private String actingParameter1;
-
-
-  public InnerPojo getInnerPojo() {
-    return innerPojo;
+  public InnerActingParameter getInnerActingParameter() {
+    return innerActingParameter;
   }
 
-  public String getActingParameter1() {
-    return actingParameter1;
-  }
 }

@@ -91,12 +91,12 @@ public interface TestExtensionAware {
 
   }
 
-  default OperationElementDeclaration complexActingParameterOPDeclaration(String configName, String actingParameterP1,
+  default OperationElementDeclaration complexActingParameterOPDeclaration(String configName,
                                                                           String innerActingParameter) {
     final ParameterValue innerPojoValue =
-        ParameterObjectValue.builder().ofType("InnerPojo").withParameter("innerParam", innerActingParameter).build();
+        ParameterObjectValue.builder().ofType("InnerActingParameter").withParameter("stringParam", innerActingParameter).build();
     final ParameterValue actingParameter =
-        ParameterObjectValue.builder().ofType("ActingParameter").withParameter("innerPojo", innerPojoValue).build();
+        ParameterObjectValue.builder().ofType("ActingParameter").withParameter("innerActingParameter", innerPojoValue).build();
     return TEST_EXTENSION_DECLARER
         .newOperation(COMPLEX_ACTING_PARAMETER_OP_ELEMENT_NAME)
         .withConfig(configName)

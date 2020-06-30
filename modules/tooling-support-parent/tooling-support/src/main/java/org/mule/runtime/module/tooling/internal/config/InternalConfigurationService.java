@@ -9,8 +9,11 @@ package org.mule.runtime.module.tooling.internal.config;
 import static com.google.common.collect.Sets.cartesianProduct;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.emptySet;
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
+import static org.mule.metadata.java.api.utils.JavaTypeUtils.getType;
 import static org.mule.runtime.api.i18n.I18nMessageFactory.createStaticMessage;
 import static org.mule.runtime.api.value.ResolvingFailure.Builder.newFailure;
 import static org.mule.runtime.api.value.ValueResult.resultFrom;
@@ -23,8 +26,10 @@ import static org.mule.runtime.api.connection.ConnectionValidationResult.failure
 import org.mule.runtime.api.component.location.ConfigurationComponentLocator;
 import org.mule.runtime.api.connection.ConnectionValidationResult;
 import org.mule.runtime.api.exception.MuleRuntimeException;
+import org.mule.runtime.api.meta.NamedObject;
 import org.mule.runtime.api.meta.model.ComponentModel;
 import org.mule.runtime.api.meta.model.config.ConfigurationModel;
+import org.mule.runtime.api.meta.model.parameter.ParameterGroupModel;
 import org.mule.runtime.api.meta.model.parameter.ParameterModel;
 import org.mule.runtime.api.meta.model.parameter.ParameterizedModel;
 import org.mule.runtime.api.meta.model.parameter.ValueProviderModel;
@@ -35,12 +40,16 @@ import org.mule.runtime.api.util.LazyValue;
 import org.mule.runtime.api.value.ValueResult;
 import org.mule.runtime.app.declaration.api.ArtifactDeclaration;
 import org.mule.runtime.app.declaration.api.ComponentElementDeclaration;
+import org.mule.runtime.app.declaration.api.ParameterElementDeclaration;
+import org.mule.runtime.app.declaration.api.ParameterGroupElementDeclaration;
 import org.mule.runtime.core.api.MuleContext;
 import org.mule.runtime.core.api.config.ConfigurationException;
 import org.mule.runtime.core.api.connector.ConnectionManager;
 import org.mule.runtime.core.api.el.ExpressionManager;
 import org.mule.runtime.core.api.extension.ExtensionManager;
 import org.mule.runtime.extension.api.declaration.type.ExtensionsTypeLoaderFactory;
+import org.mule.runtime.extension.api.model.parameter.ImmutableParameterGroupModel;
+import org.mule.runtime.extension.api.property.ClassLoaderModelProperty;
 import org.mule.runtime.extension.api.property.MetadataKeyIdModelProperty;
 import org.mule.runtime.extension.api.runtime.config.ConfigurationInstance;
 import org.mule.runtime.extension.api.values.ValueResolvingException;
@@ -67,6 +76,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -305,13 +315,27 @@ public class InternalConfigurationService implements ConfigurationService {
                                                                                    T model) {
     Map<String, Object> parametersMap = new HashMap<>();
 
-    componentElementDeclaration
-        .getParameterGroups()
-        .forEach(
-                 parameterGroup -> parameterGroup
-                     .getParameters()
-                     .forEach(
-                              p -> parametersMap.put(p.getName(), extractValue(p.getValue()))));
+    Map<String, ParameterGroupModel> parameterGroups =
+        model.getParameterGroupModels().stream().collect(toMap(NamedObject::getName, identity()));
+
+    for (ParameterGroupElementDeclaration parameterGroupElement : componentElementDeclaration.getParameterGroups()) {
+      final String parameterGroupName = parameterGroupElement.getName();
+      final ParameterGroupModel parameterGroupModel = parameterGroups.get(parameterGroupName);
+      if (parameterGroupModel == null) {
+        throw new MuleRuntimeException(createStaticMessage("Could not find parameter group with name: %s in model",
+                                                           parameterGroupName));
+      }
+
+      for (ParameterElementDeclaration parameterElement : parameterGroupElement.getParameters()) {
+        final String parameterName = parameterElement.getName();
+        final ParameterModel parameterModel = parameterGroupModel.getParameter(parameterName)
+            .orElseThrow(() -> new MuleRuntimeException(createStaticMessage("Could not find parameter with name: %s in parameter group: %s",
+                                                                            parameterName, parameterGroupName)));
+        parametersMap.put(parameterName,
+                          extractValue(parameterElement.getValue(),
+                                       artifactHelper().getParameterClass(parameterModel, componentElementDeclaration)));
+      }
+    }
 
     try {
       final ResolverSet resolverSet =
