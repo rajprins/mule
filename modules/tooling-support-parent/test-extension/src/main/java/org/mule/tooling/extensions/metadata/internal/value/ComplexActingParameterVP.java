@@ -17,8 +17,7 @@ public class ComplexActingParameterVP implements ValueProvider {
 
   @Override
   public Set<Value> resolve() throws ValueResolvingException {
-    final String innerValueId = actingParameter.getInnerPojo().getInnerParam();
-    final String actingParameterId = actingParameter.getActingParameter1();
-    return singleton(newValue(actingParameterId).withChild(newValue(innerValueId)).build());
+    final String innerValueId = actingParameter.getInnerActingParameter().getStringParam();
+    return singleton(newValue(innerValueId).build());
   }
 }

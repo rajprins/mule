@@ -2,13 +2,13 @@ package org.mule.tooling.extensions.metadata.internal.parameters;
 
 import org.mule.runtime.extension.api.annotation.param.Parameter;
 
-public class InnerPojo {
+public class InnerActingParameter {
 
   @Parameter
-  private String innerParam;
+  private String stringParam;
 
-  public String getInnerParam() {
-    return innerParam;
+  public String getStringParam() {
+    return stringParam;
   }
 
 }
