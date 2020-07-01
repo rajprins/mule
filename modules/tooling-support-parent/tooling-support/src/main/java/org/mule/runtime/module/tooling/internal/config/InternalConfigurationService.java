@@ -278,18 +278,18 @@ public class InternalConfigurationService implements ConfigurationService {
                                        () -> reflectionCache);
   }
 
-  private String getResolverName(ParameterizedModel componentModel, String parameterName) {
-    return componentModel
-        .getAllParameterModels()
-        .stream()
-        .filter(pm -> Objects.equals(pm.getName(), parameterName)
-            && pm.getModelProperty(ValueProviderFactoryModelProperty.class).isPresent())
-        .findAny()
-        .flatMap(pm -> pm.getModelProperty(ValueProviderFactoryModelProperty.class))
-        .map(mp -> mp.getValueProvider().getSimpleName())
-        .orElseThrow(() -> new MuleRuntimeException(createStaticMessage("Could not find parameter with name: %s",
-                                                                        parameterName)));
-  }
+  //private String getResolverName(ParameterizedModel componentModel, String parameterName) {
+  //  return componentModel
+  //      .getAllParameterModels()
+  //      .stream()
+  //      .filter(pm -> Objects.equals(pm.getName(), parameterName)
+  //          && pm.getModelProperty(ValueProviderFactoryModelProperty.class).isPresent())
+  //      .findAny()
+  //      .flatMap(pm -> pm.getModelProperty(ValueProviderFactoryModelProperty.class))
+  //      .map(mp -> mp.getValueProvider().getSimpleName())
+  //      .orElseThrow(() -> new MuleRuntimeException(createStaticMessage("Could not find parameter with name: %s",
+  //                                                                      parameterName)));
+  //}
 
   private Supplier<Object> connectionSupplier() {
     return artifactHelper().getConnectionInstance()
@@ -298,18 +298,18 @@ public class InternalConfigurationService implements ConfigurationService {
 
   }
 
-  private MetadataContext createMetadataContext() {
-    Supplier<Optional<ConfigurationInstance>> configSupplier = () -> artifactHelper().getConfigurationInstance();
-    return artifactHelper().findConfigurationDeclaration().map(
-                                                               cd -> new DefaultMetadataContext(configSupplier,
-                                                                                                connectionManager,
-                                                                                                getNoOpCache(),
-                                                                                                ExtensionsTypeLoaderFactory
-                                                                                                    .getDefault()
-                                                                                                    .createTypeLoader(getClassLoader(artifactHelper()
-                                                                                                        .getExtensionModel(cd)))))
-        .orElseThrow(() -> new MuleRuntimeException(createStaticMessage("Could not create MetadataContext")));
-  }
+  //private MetadataContext createMetadataContext() {
+  //  Supplier<Optional<ConfigurationInstance>> configSupplier = () -> artifactHelper().getConfigurationInstance();
+  //  return artifactHelper().findConfigurationDeclaration().map(
+  //                                                             cd -> new DefaultMetadataContext(configSupplier,
+  //                                                                                              connectionManager,
+  //                                                                                              getNoOpCache(),
+  //                                                                                              ExtensionsTypeLoaderFactory
+  //                                                                                                  .getDefault()
+  //                                                                                                  .createTypeLoader(getClassLoader(artifactHelper()
+  //                                                                                                      .getExtensionModel(cd)))))
+  //      .orElseThrow(() -> new MuleRuntimeException(createStaticMessage("Could not create MetadataContext")));
+  //}
 
   private <T extends ComponentModel> ParameterValueResolver parameterValueResolver(ComponentElementDeclaration componentElementDeclaration,
                                                                                    T model) {
@@ -352,28 +352,28 @@ public class InternalConfigurationService implements ConfigurationService {
     }
   }
 
-  private static class ResolvableParametersComparator implements Comparator<ParameterModel> {
-
-    private static final Comparator<ParameterModel> instance = new ResolvableParametersComparator();
-
-    private static Comparator<ParameterModel> get() {
-      return instance;
-    }
-
-    @Override
-    public int compare(ParameterModel pm1, ParameterModel pm2) {
-      //Since we are working with resolvable parameters, they all should have a value provide model
-      final ValueProviderModel vpm1 = pm1.getValueProviderModel().get();
-      final ValueProviderModel vpm2 = pm2.getValueProviderModel().get();
-
-      if (vpm1.getActingParameters().contains(pm2.getName())) {
-        return 1;
-      }
-      if (vpm2.getActingParameters().contains(pm1.getName())) {
-        return -1;
-      }
-      return 0;
-    }
-  }
+  //private static class ResolvableParametersComparator implements Comparator<ParameterModel> {
+  //
+  //  private static final Comparator<ParameterModel> instance = new ResolvableParametersComparator();
+  //
+  //  private static Comparator<ParameterModel> get() {
+  //    return instance;
+  //  }
+  //
+  //  @Override
+  //  public int compare(ParameterModel pm1, ParameterModel pm2) {
+  //    //Since we are working with resolvable parameters, they all should have a value provide model
+  //    final ValueProviderModel vpm1 = pm1.getValueProviderModel().get();
+  //    final ValueProviderModel vpm2 = pm2.getValueProviderModel().get();
+  //
+  //    if (vpm1.getActingParameters().contains(pm2.getName())) {
+  //      return 1;
+  //    }
+  //    if (vpm2.getActingParameters().contains(pm1.getName())) {
+  //      return -1;
+  //    }
+  //    return 0;
+  //  }
+  //}
 
 }
