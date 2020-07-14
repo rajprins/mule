@@ -43,10 +43,10 @@ import org.mule.runtime.module.deployment.impl.internal.domain.DefaultDomainFact
 import org.mule.runtime.module.deployment.impl.internal.domain.DomainNotFoundException;
 import org.mule.runtime.module.deployment.impl.internal.domain.DomainRepository;
 import org.mule.runtime.module.tooling.api.ToolingService;
+import org.mule.runtime.module.tooling.api.artifact.DeclarationSessionBuilder;
 import org.mule.runtime.module.tooling.api.connectivity.ConnectivityTestingServiceBuilder;
-import org.mule.runtime.module.tooling.api.config.DeclarationSessionBuilder;
-import org.mule.runtime.module.tooling.internal.connectivity.DefaultConnectivityTestingServiceBuilder;
 import org.mule.runtime.module.tooling.internal.config.DefaultDeclarationSessionBuilder;
+import org.mule.runtime.module.tooling.internal.connectivity.DefaultConnectivityTestingServiceBuilder;
 
 import java.io.File;
 import java.io.IOException;

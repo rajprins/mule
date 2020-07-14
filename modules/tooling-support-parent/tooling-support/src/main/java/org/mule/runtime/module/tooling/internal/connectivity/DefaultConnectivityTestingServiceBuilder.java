@@ -7,7 +7,6 @@
 package org.mule.runtime.module.tooling.internal.connectivity;
 
 import org.mule.runtime.api.connectivity.ConnectivityTestingService;
-import org.mule.runtime.app.declaration.api.ArtifactDeclaration;
 import org.mule.runtime.module.deployment.impl.internal.application.DefaultApplicationFactory;
 import org.mule.runtime.module.tooling.api.connectivity.ConnectivityTestingServiceBuilder;
 import org.mule.runtime.module.tooling.internal.AbstractArtifactAgnosticServiceBuilder;
@@ -22,16 +21,8 @@ public class DefaultConnectivityTestingServiceBuilder
     extends AbstractArtifactAgnosticServiceBuilder<ConnectivityTestingServiceBuilder, ConnectivityTestingService>
     implements ConnectivityTestingServiceBuilder {
 
-  private ArtifactDeclaration artifactDeclaration;
-
   public DefaultConnectivityTestingServiceBuilder(DefaultApplicationFactory defaultApplicationFactory) {
     super(defaultApplicationFactory);
-  }
-
-  @Override
-  public ConnectivityTestingServiceBuilder setArtifactDeclaration(ArtifactDeclaration artifactDeclaration) {
-    this.artifactDeclaration = artifactDeclaration;
-    return this;
   }
 
   @Override
@@ -39,8 +30,4 @@ public class DefaultConnectivityTestingServiceBuilder
     return new TemporaryArtifactConnectivityTestingService(applicationSupplier);
   }
 
-  @Override
-  protected ArtifactDeclaration getArtifactDeclaration() {
-    return this.artifactDeclaration;
-  }
 }

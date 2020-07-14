@@ -8,7 +8,6 @@ package org.mule.runtime.module.tooling.api.connectivity;
 
 import org.mule.api.annotation.NoImplement;
 import org.mule.runtime.api.connectivity.ConnectivityTestingService;
-import org.mule.runtime.app.declaration.api.ArtifactDeclaration;
 import org.mule.runtime.module.tooling.api.ArtifactAgnosticServiceBuilder;
 
 /**
@@ -20,13 +19,5 @@ import org.mule.runtime.module.tooling.api.ArtifactAgnosticServiceBuilder;
 @NoImplement
 public interface ConnectivityTestingServiceBuilder
     extends ArtifactAgnosticServiceBuilder<ConnectivityTestingServiceBuilder, ConnectivityTestingService> {
-
-  /**
-   * Configures the mule components required to execute the service
-   *
-   * @param artifactDeclaration set of mule components required execute service
-   * @return the builder
-   */
-  ConnectivityTestingServiceBuilder setArtifactDeclaration(ArtifactDeclaration artifactDeclaration);
 
 }

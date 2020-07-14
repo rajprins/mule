@@ -15,7 +15,7 @@ import org.mule.runtime.api.lifecycle.InitialisationException;
 import org.mule.runtime.api.lifecycle.Stoppable;
 import org.mule.runtime.deployment.model.api.application.Application;
 import org.mule.runtime.deployment.model.api.domain.Domain;
-import org.mule.runtime.module.tooling.api.config.DeclarationSessionBuilder;
+import org.mule.runtime.module.tooling.api.artifact.DeclarationSessionBuilder;
 import org.mule.runtime.module.tooling.api.connectivity.ConnectivityTestingServiceBuilder;
 
 import java.io.File;
