@@ -7,9 +7,9 @@
 package org.mule.runtime.module.tooling.internal;
 
 import static java.util.Collections.emptyMap;
-import static java.util.Collections.emptySet;
 import static java.util.Collections.singleton;
 import static java.util.Collections.singletonMap;
+import static java.util.stream.Collectors.toList;
 import static org.mule.runtime.api.util.Preconditions.checkState;
 import static org.mule.runtime.container.api.MuleFoldersUtil.getExecutionFolder;
 import static org.mule.runtime.deployment.model.api.plugin.ArtifactPluginDescriptor.MULE_PLUGIN_CLASSIFIER;
@@ -29,8 +29,8 @@ import org.mule.runtime.module.tooling.api.ArtifactAgnosticServiceBuilder;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Map;
 
-import org.apache.maven.model.Dependency;
 import org.apache.maven.model.Model;
 
 public abstract class AbstractArtifactAgnosticServiceBuilder<T extends ArtifactAgnosticServiceBuilder, S>
@@ -42,11 +42,28 @@ public abstract class AbstractArtifactAgnosticServiceBuilder<T extends ArtifactA
   private static final String TMP_APP_MODEL_VERSION = "4.0.0";
 
   private final DefaultApplicationFactory defaultApplicationFactory;
+
+  private ArtifactDeclaration artifactDeclaration;
   private Model model;
+  private Map<String, String> artifactProperties = emptyMap();
 
   protected AbstractArtifactAgnosticServiceBuilder(DefaultApplicationFactory defaultApplicationFactory) {
     this.defaultApplicationFactory = defaultApplicationFactory;
     createTempMavenModel();
+  }
+
+  @Override
+  public T setArtifactProperties(Map<String, String> artifactProperties) {
+    checkState(artifactProperties != null, "artifactProperties cannot be null");
+    this.artifactProperties = artifactProperties;
+    return getThis();
+  }
+
+  @Override
+  public T setArtifactDeclaration(ArtifactDeclaration artifactDeclaration) {
+    checkState(artifactDeclaration != null, "artifactDeclaration cannot be null");
+    this.artifactDeclaration = artifactDeclaration;
+    return getThis();
   }
 
   /**
@@ -55,22 +72,51 @@ public abstract class AbstractArtifactAgnosticServiceBuilder<T extends ArtifactA
   @Override
   public T addDependency(String groupId, String artifactId, String artifactVersion,
                          String classifier, String type) {
-    Dependency dependency = new Dependency();
+    org.apache.maven.model.Dependency dependency = new org.apache.maven.model.Dependency();
     dependency.setGroupId(groupId);
     dependency.setArtifactId(artifactId);
     dependency.setVersion(artifactVersion);
     dependency.setType(type);
     dependency.setClassifier(classifier);
-    if (!MULE_PLUGIN_CLASSIFIER.equals(classifier)) {
+
+    addMavenModelDependency(dependency);
+    return getThis();
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public T addDependency(Dependency dependency) {
+    org.apache.maven.model.Dependency mavenModelDependency = new org.apache.maven.model.Dependency();
+    mavenModelDependency.setGroupId(dependency.getGroupId());
+    mavenModelDependency.setArtifactId(dependency.getArtifactId());
+    mavenModelDependency.setVersion(dependency.getVersion());
+    mavenModelDependency.setType(dependency.getType());
+    mavenModelDependency.setClassifier(dependency.getClassifier());
+    mavenModelDependency.setOptional(dependency.getOptional());
+    mavenModelDependency.setScope(dependency.getScope());
+    mavenModelDependency.setSystemPath(dependency.getSystemPath());
+    mavenModelDependency.setExclusions(dependency.getExclusions().stream().map(exclusion -> {
+      org.apache.maven.model.Exclusion mavenModelExclusion = new org.apache.maven.model.Exclusion();
+      mavenModelExclusion.setGroupId(exclusion.getGroupId());
+      mavenModelExclusion.setArtifactId(exclusion.getArtifactId());
+      return mavenModelExclusion;
+    }).collect(toList()));
+
+    addMavenModelDependency(mavenModelDependency);
+    return getThis();
+  }
+
+  private void addMavenModelDependency(org.apache.maven.model.Dependency dependency) {
+    if (!MULE_PLUGIN_CLASSIFIER.equals(dependency.getClassifier())) {
       addSharedLibraryDependency(model, dependency);
     }
     model.getDependencies().add(dependency);
-    return getThis();
   }
 
   @Override
   public S build() {
-    final ArtifactDeclaration artifactDeclaration = getArtifactDeclaration();
     checkState(artifactDeclaration != null, "artifact configuration cannot be null");
     return createService(() -> {
       String applicationName = UUID.getUUID() + "-connectivity-testing-temp-app";
@@ -79,6 +125,7 @@ public abstract class AbstractArtifactAgnosticServiceBuilder<T extends ArtifactA
       applicationDescriptor.setArtifactDeclaration(artifactDeclaration);
       applicationDescriptor.setConfigResources(singleton("empty-app.xml"));
       applicationDescriptor.setArtifactLocation(applicationFolder);
+      applicationDescriptor.setAppProperties(artifactProperties);
       createDeployablePomFile(applicationFolder, model);
       updateArtifactPom(applicationFolder, model);
       MavenClientProvider mavenClientProvider =
@@ -94,9 +141,6 @@ public abstract class AbstractArtifactAgnosticServiceBuilder<T extends ArtifactA
   }
 
   protected abstract S createService(ApplicationSupplier applicationSupplier);
-
-  protected abstract ArtifactDeclaration getArtifactDeclaration();
-
 
   private void createTempMavenModel() {
     model = new Model();

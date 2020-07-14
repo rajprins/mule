@@ -4,7 +4,7 @@
  * license, a copy of which has been included with this distribution in the
  * LICENSE.txt file.
  */
-package org.mule.runtime.module.tooling.api.config;
+package org.mule.runtime.module.tooling.api.artifact;
 
 
 import org.mule.api.annotation.NoImplement;
@@ -13,11 +13,11 @@ import org.mule.runtime.api.value.ValueResult;
 import org.mule.runtime.app.declaration.api.ComponentElementDeclaration;
 
 /**
- * Session in charge or resolving connector's operations and retrieving metadata for all
+ * It is in charge or resolving connector's operations and retrieving metadata for all
  * components related to the same session configuration. The session configuration should be
  * defined by multiple global elements, including Configurations, Connections, etc.
  * <p/>
- * This service provides the possibility to avoid having a full artifact configuration before being able to
+ * This session provides the possibility to avoid having a full artifact configuration before being able to
  * gather metadata from the connector.
  * <p/>
  *
