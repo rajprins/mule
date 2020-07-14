@@ -15,8 +15,8 @@ import org.mule.runtime.api.lifecycle.InitialisationException;
 import org.mule.runtime.api.lifecycle.Stoppable;
 import org.mule.runtime.deployment.model.api.application.Application;
 import org.mule.runtime.deployment.model.api.domain.Domain;
+import org.mule.runtime.module.tooling.api.config.DeclarationSessionBuilder;
 import org.mule.runtime.module.tooling.api.connectivity.ConnectivityTestingServiceBuilder;
-import org.mule.runtime.module.tooling.api.config.ConfigurationServiceBuilder;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,7 +39,7 @@ public interface ToolingService extends Initialisable, Stoppable {
    */
   ConnectivityTestingServiceBuilder newConnectivityTestingServiceBuilder();
 
-  ConfigurationServiceBuilder newConfigurationServiceBuilder();
+  DeclarationSessionBuilder newDeclarationSessionBuilder();
 
   /**
    * Creates an {@link Application} from a set of resources.

@@ -13,39 +13,41 @@ import org.mule.runtime.api.value.ValueResult;
 import org.mule.runtime.app.declaration.api.ComponentElementDeclaration;
 
 /**
- * Service in charge or resolving connector's operations and retrieving metadata for all
- * components related to the same Configuration.
+ * Session in charge or resolving connector's operations and retrieving metadata for all
+ * components related to the same session configuration. The session configuration should be
+ * defined by multiple global elements, including Configurations, Connections, etc.
  * <p/>
  * This service provides the possibility to avoid having a full artifact configuration before being able to
  * gather metadata from the connector.
  * <p/>
- * Each instance of {@link ConfigurationService} should handle one and only one connector configuration.
  *
  * @since 4.4.0
  */
 @NoImplement
-public interface ConfigurationService {
+public interface DeclarationSession {
 
   /**
-   * Test connectivity for the connection associated to this configuration.
+   * Test connectivity for the connection associated to the configuration with the provided name.
+   * @param configName The name of the config for which to test connection.
    *
    * @return a {@link ConnectionValidationResult} with the result of the connectivity testing
    */
-  ConnectionValidationResult testConnection();
+  ConnectionValidationResult testConnection(String configName);
 
   /**
    * Retrieve all {@link org.mule.runtime.api.value.Value} that can be configured for the given parameter.
    * @param component a {@link ComponentElementDeclaration} for the Component (Operation, Source, etc) from which
    *                  the available values can be used on the parameter {@param parameterName}. In case the value
    *                  provider requires any acting parameters to be able to resolve this values, those parameters
-   *                  should be populated in this declaration.
+   *                  should be populated in this declaration. Also, if the Component requires values from a Configuration,
+   *                  then its name should be specified in the declaration.
    * @param parameterName the name of the parameter for which to resolve the {@link org.mule.runtime.api.value.Value}s
    * @return a {@link ValueResult} with the accepted parameter values to use
    */
   ValueResult getValues(ComponentElementDeclaration component, String parameterName);
 
   /**
-   * Stops and disposes all resources used by this {@link ConfigurationService}
+   * Stops and disposes all resources used by this {@link DeclarationSession}
    */
   void dispose();
 

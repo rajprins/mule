@@ -44,9 +44,9 @@ import org.mule.runtime.module.deployment.impl.internal.domain.DomainNotFoundExc
 import org.mule.runtime.module.deployment.impl.internal.domain.DomainRepository;
 import org.mule.runtime.module.tooling.api.ToolingService;
 import org.mule.runtime.module.tooling.api.connectivity.ConnectivityTestingServiceBuilder;
-import org.mule.runtime.module.tooling.api.config.ConfigurationServiceBuilder;
+import org.mule.runtime.module.tooling.api.config.DeclarationSessionBuilder;
 import org.mule.runtime.module.tooling.internal.connectivity.DefaultConnectivityTestingServiceBuilder;
-import org.mule.runtime.module.tooling.internal.config.DefaultConfigurationServiceBuilder;
+import org.mule.runtime.module.tooling.internal.config.DefaultDeclarationSessionBuilder;
 
 import java.io.File;
 import java.io.IOException;
@@ -110,8 +110,8 @@ public class DefaultToolingService implements ToolingService {
   }
 
   @Override
-  public ConfigurationServiceBuilder newConfigurationServiceBuilder() {
-    return new DefaultConfigurationServiceBuilder(applicationFactory);
+  public DeclarationSessionBuilder newDeclarationSessionBuilder() {
+    return new DefaultDeclarationSessionBuilder(applicationFactory);
   }
 
   /**

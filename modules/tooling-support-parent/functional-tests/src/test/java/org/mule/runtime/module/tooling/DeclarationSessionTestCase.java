@@ -15,7 +15,7 @@ import static org.mule.test.infrastructure.maven.MavenTestUtils.getMavenLocalRep
 import org.mule.runtime.api.connection.ConnectionValidationResult;
 import org.mule.runtime.api.value.ValueResult;
 import org.mule.runtime.app.declaration.api.ComponentElementDeclaration;
-import org.mule.runtime.module.tooling.api.config.ConfigurationService;
+import org.mule.runtime.module.tooling.api.config.DeclarationSession;
 import org.mule.tck.junit4.rule.SystemProperty;
 import org.mule.test.infrastructure.deployment.AbstractFakeMuleServerTestCase;
 
@@ -25,7 +25,7 @@ import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 
-public class ConfigurationServiceTestCase extends AbstractFakeMuleServerTestCase implements TestExtensionAware {
+public class DeclarationSessionTestCase extends AbstractFakeMuleServerTestCase implements TestExtensionAware {
 
   private static final String EXTENSION_GROUP_ID = "org.mule.tooling";
   private static final String EXTENSION_ARTIFACT_ID = "tooling-support-test-extension";
@@ -38,11 +38,11 @@ public class ConfigurationServiceTestCase extends AbstractFakeMuleServerTestCase
   private static final String PROVIDED_PARAMETER_NAME = "providedParameter";
   private static final String METADATA_KEY_PARAMETER = "metadataKey";
 
-  private ConfigurationService configurationService;
+  private DeclarationSession session;
 
   @ClassRule
   public static SystemProperty artifactsLocation =
-      new SystemProperty("mule.test.maven.artifacts.dir", ConfigurationService.class.getResource("/").getPath());
+      new SystemProperty("mule.test.maven.artifacts.dir", DeclarationSession.class.getResource("/").getPath());
 
   @Rule
   public SystemProperty repositoryLocation =
@@ -51,32 +51,32 @@ public class ConfigurationServiceTestCase extends AbstractFakeMuleServerTestCase
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    this.configurationService = this.muleServer
+    this.session = this.muleServer
         .toolingService()
-        .newConfigurationServiceBuilder()
+        .newDeclarationSessionBuilder()
         .addDependency(EXTENSION_GROUP_ID,
                        EXTENSION_ARTIFACT_ID,
                        EXTENSION_VERSION,
                        EXTENSION_CLASSIFIER,
                        EXTENSION_TYPE)
-        .withConfigurationDeclaration(configurationDeclaration(CONFIG_NAME, connectionDeclaration(CLIENT_NAME)))
+        .withGlobalElements(configurationDeclaration(CONFIG_NAME, connectionDeclaration(CLIENT_NAME)))
         .build();
     this.muleServer.start();
   }
 
   @Test
   public void testConnection() {
-    ConnectionValidationResult connectionValidationResult = configurationService.testConnection();
+    ConnectionValidationResult connectionValidationResult = session.testConnection(CONFIG_NAME);
     assertThat(connectionValidationResult.isValid(), equalTo(true));
   }
 
   //@Test
   //public void discoverAllValues() {
-  //  ConfigurationService configurationService =
-  //      addDependency(toolingService.newConfigurationServiceBuilder())
-  //          .withConfigurationDeclaration(buildConfigDeclaration())
+  //  DeclarationSession session =
+  //      addDependency(toolingService.newDeclarationSessionBuilder())
+  //          .withGlobalElement(buildConfigDeclaration())
   //          .build();
-  //  DataProviderResult<List<DataResult>> providerResult = configurationService.discover();
+  //  DataProviderResult<List<DataResult>> providerResult = session.discover();
   //  assertThat(providerResult.isSuccessful(), is(true));
   //
   //  AtomicInteger totalValidations = new AtomicInteger();
@@ -229,7 +229,7 @@ public class ConfigurationServiceTestCase extends AbstractFakeMuleServerTestCase
   }
 
   private void getResultAndValidate(ComponentElementDeclaration elementDeclaration, String parameterName, String expectedValue) {
-    ValueResult providerResult = configurationService.getValues(elementDeclaration, parameterName);
+    ValueResult providerResult = session.getValues(elementDeclaration, parameterName);
 
     assertThat(providerResult.isSuccess(), equalTo(true));
     assertThat(providerResult.getValues(), hasSize(1));
