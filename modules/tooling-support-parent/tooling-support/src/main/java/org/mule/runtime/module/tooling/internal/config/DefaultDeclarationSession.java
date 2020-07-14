@@ -7,15 +7,13 @@
 package org.mule.runtime.module.tooling.internal.config;
 
 import static org.mule.runtime.api.i18n.I18nMessageFactory.createStaticMessage;
-import static org.mule.runtime.api.value.ResolvingFailure.Builder.newFailure;
-import static org.mule.runtime.api.value.ValueResult.resultFrom;
 import org.mule.runtime.api.connection.ConnectionValidationResult;
 import org.mule.runtime.api.exception.MuleException;
 import org.mule.runtime.api.exception.MuleRuntimeException;
 import org.mule.runtime.api.util.LazyValue;
 import org.mule.runtime.api.value.ValueResult;
 import org.mule.runtime.core.api.MuleContext;
-import org.mule.runtime.module.tooling.api.config.ConfigurationService;
+import org.mule.runtime.module.tooling.api.config.DeclarationSession;
 import org.mule.runtime.app.declaration.api.ComponentElementDeclaration;
 import org.mule.runtime.deployment.model.api.application.Application;
 import org.mule.runtime.module.tooling.internal.AbstractArtifactAgnosticService;
@@ -23,11 +21,11 @@ import org.mule.runtime.module.tooling.internal.ApplicationSupplier;
 
 //TODO: Refactor this, don't think we need to have the temporary application logic. Also, handle concurrency
 //and operations on disposed services.
-public class DefaultConfigurationService extends AbstractArtifactAgnosticService implements ConfigurationService {
+public class DefaultDeclarationSession extends AbstractArtifactAgnosticService implements DeclarationSession {
 
-  private LazyValue<ConfigurationService> internalConfigurationService;
+  private LazyValue<DeclarationSession> internalConfigurationService;
 
-  DefaultConfigurationService(ApplicationSupplier applicationSupplier) {
+  DefaultDeclarationSession(ApplicationSupplier applicationSupplier) {
     super(applicationSupplier);
     this.internalConfigurationService = new LazyValue<>(() -> {
       try {
@@ -38,35 +36,28 @@ public class DefaultConfigurationService extends AbstractArtifactAgnosticService
     });
   }
 
-  private ConfigurationService createInternalService(Application application) {
-    final InternalConfigurationService internalDataProviderService =
-        new InternalConfigurationService(application.getDescriptor().getArtifactDeclaration());
+  private DeclarationSession createInternalService(Application application) {
+    final InternalDeclarationSession internalDataProviderService =
+        new InternalDeclarationSession(application.getDescriptor().getArtifactDeclaration());
     return application.getRegistry()
         .lookupByType(MuleContext.class)
         .map(muleContext -> {
           try {
             return muleContext.getInjector().inject(internalDataProviderService);
           } catch (MuleException e) {
-            throw new MuleRuntimeException(createStaticMessage("Could not inject values into ConfigurationService"));
+            throw new MuleRuntimeException(createStaticMessage("Could not inject values into DeclarationSession"));
           }
         })
-        .orElseThrow(() -> new MuleRuntimeException(createStaticMessage("Could not find injector to create InternalConfigurationService")));
+        .orElseThrow(() -> new MuleRuntimeException(createStaticMessage("Could not find injector to create InternalDeclarationSession")));
   }
 
-  //@Override
-  //public DataProviderResult<List<DataResult>> discover() {
-  //  return withTemporaryApplication(
-  //                                  app -> createInternalService(app).discover(),
-  //                                  err -> failure(newFailure(err).build()));
-  //}
-
-  private ConfigurationService withInternalService() {
+  private DeclarationSession withInternalService() {
     return this.internalConfigurationService.get();
   }
 
   @Override
-  public ConnectionValidationResult testConnection() {
-    return withInternalService().testConnection();
+  public ConnectionValidationResult testConnection(String configName) {
+    return withInternalService().testConnection(configName);
   }
 
   @Override
@@ -78,6 +69,5 @@ public class DefaultConfigurationService extends AbstractArtifactAgnosticService
   public void dispose() {
     super.dispose();
   }
-
 
 }

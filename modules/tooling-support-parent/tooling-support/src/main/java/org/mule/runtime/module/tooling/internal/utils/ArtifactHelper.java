@@ -91,33 +91,35 @@ public class ArtifactHelper {
     return ofNullable(foundModel.get());
   }
 
-  public Optional<ConfigurationModel> findConfigurationModel() {
-    return findConfigurationProvider().map(ConfigurationProvider::getConfigurationModel);
+  public Optional<ConfigurationModel> findConfigurationModel(String configName) {
+    return findConfigurationProvider(configName).map(ConfigurationProvider::getConfigurationModel);
   }
 
-  public Optional<ConfigurationElementDeclaration> findConfigurationDeclaration() {
+  public Optional<ConfigurationElementDeclaration> findConfigurationDeclaration(String configName) {
     final Reference<ConfigurationElementDeclaration> configDeclaration = new Reference<>();
     final GlobalElementDeclarationVisitor visitor = new GlobalElementDeclarationVisitor() {
 
       @Override
       public void visit(ConfigurationElementDeclaration declaration) {
-        configDeclaration.set(declaration);
+        if (declaration.getRefName().equals(configName)) {
+          configDeclaration.set(declaration);
+        }
       }
     };
     artifactDeclaration.getGlobalElements().forEach(gld -> gld.accept(visitor));
     return ofNullable(configDeclaration.get());
   }
 
-  public Optional<ConfigurationProvider> findConfigurationProvider() {
-    return findConfigurationDeclaration()
+  public Optional<ConfigurationProvider> findConfigurationProvider(String configName) {
+    return findConfigurationDeclaration(configName)
         .map(ced -> Location.builder().globalName(ced.getRefName()).build())
         .flatMap(cloc -> componentLocator.find(cloc))
         .filter(cp -> cp instanceof ConfigurationProvider)
         .map(cp -> (ConfigurationProvider) cp);
   }
 
-  public Optional<ConnectionProvider> findConnectionProvider() {
-    return findConfigurationDeclaration()
+  public Optional<ConnectionProvider> findConnectionProvider(String configName) {
+    return findConfigurationDeclaration(configName)
         .map(ced -> Location.builder().globalName(ced.getRefName()).addConnectionPart().build())
         .flatMap(conloc -> componentLocator.find(conloc))
         .filter(c -> c instanceof ConnectionProviderResolver)
@@ -128,12 +130,12 @@ public class ArtifactHelper {
                                           .getFirst())));
   }
 
-  public Optional<ConfigurationInstance> getConfigurationInstance() {
-    return findConfigurationProvider().map(cp -> cp.get(getNullEvent()));
+  public Optional<ConfigurationInstance> getConfigurationInstance(String configName) {
+    return findConfigurationProvider(configName).map(cp -> cp.get(getNullEvent()));
   }
 
-  public Optional<Object> getConnectionInstance() {
-    return findConnectionProvider().map(c -> handlingException((CheckedSupplier<Object>) c::connect));
+  public Optional<Object> getConnectionInstance(String configName) {
+    return findConnectionProvider(configName).map(c -> handlingException((CheckedSupplier<Object>) c::connect));
   }
 
   private <T> T handlingException(CheckedSupplier<T> supplier, String... errorMessage) {
