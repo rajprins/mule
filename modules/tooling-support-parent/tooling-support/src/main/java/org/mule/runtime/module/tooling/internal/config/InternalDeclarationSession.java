@@ -7,6 +7,7 @@
 package org.mule.runtime.module.tooling.internal.config;
 
 import static java.util.Collections.emptySet;
+import static java.util.Optional.empty;
 import static java.util.Optional.ofNullable;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
@@ -19,15 +20,17 @@ import org.mule.runtime.api.component.location.ConfigurationComponentLocator;
 import org.mule.runtime.api.connection.ConnectionValidationResult;
 import org.mule.runtime.api.exception.MuleRuntimeException;
 import org.mule.runtime.api.meta.NamedObject;
-import org.mule.runtime.api.meta.model.ComponentModel;
+import org.mule.runtime.api.meta.model.EnrichableModel;
 import org.mule.runtime.api.meta.model.parameter.ParameterGroupModel;
 import org.mule.runtime.api.meta.model.parameter.ParameterModel;
+import org.mule.runtime.api.meta.model.parameter.ParameterizedModel;
 import org.mule.runtime.api.util.LazyValue;
 import org.mule.runtime.api.value.ValueResult;
 import org.mule.runtime.app.declaration.api.ArtifactDeclaration;
 import org.mule.runtime.app.declaration.api.ComponentElementDeclaration;
 import org.mule.runtime.app.declaration.api.ParameterElementDeclaration;
 import org.mule.runtime.app.declaration.api.ParameterGroupElementDeclaration;
+import org.mule.runtime.app.declaration.api.ParameterizedElementDeclaration;
 import org.mule.runtime.core.api.MuleContext;
 import org.mule.runtime.core.api.config.ConfigurationException;
 import org.mule.runtime.core.api.connector.ConnectionManager;
@@ -104,11 +107,18 @@ public class InternalDeclarationSession implements DeclarationSession {
   }
 
   @Override
-  public ValueResult getValues(ComponentElementDeclaration component, String parameterName) {
+  public ValueResult getValues(ParameterizedElementDeclaration component, String parameterName) {
     return artifactHelper()
-        .findComponentModel(component)
-        .map(cm -> discoverValues(cm, parameterName, parameterValueResolver(component, cm), ofNullable(component.getConfigRef())))
+        .findModel(component)
+        .map(cm -> discoverValues(cm, parameterName, parameterValueResolver(component, cm), getConfigRef(component)))
         .orElse(resultFrom(emptySet()));
+  }
+
+  private Optional<String> getConfigRef(ParameterizedElementDeclaration component) {
+    if (component instanceof ComponentElementDeclaration) {
+      return ofNullable(((ComponentElementDeclaration) component).getConfigRef());
+    }
+    return empty();
   }
 
   @Override
@@ -116,10 +126,10 @@ public class InternalDeclarationSession implements DeclarationSession {
     //do nothing
   }
 
-  private <T extends ComponentModel> ValueResult discoverValues(T componentModel,
-                                                                String parameterName,
-                                                                ParameterValueResolver parameterValueResolver,
-                                                                Optional<String> configName) {
+  private <T extends ParameterizedModel & EnrichableModel> ValueResult discoverValues(T componentModel,
+                                                                                      String parameterName,
+                                                                                      ParameterValueResolver parameterValueResolver,
+                                                                                      Optional<String> configName) {
     ValueProviderMediator<T> valueProviderMediator = createValueProviderMediator(componentModel);
     try {
       return resultFrom(valueProviderMediator.getValues(parameterName,
@@ -131,7 +141,7 @@ public class InternalDeclarationSession implements DeclarationSession {
     }
   }
 
-  private <T extends ComponentModel> ValueProviderMediator<T> createValueProviderMediator(T constructModel) {
+  private <T extends ParameterizedModel & EnrichableModel> ValueProviderMediator<T> createValueProviderMediator(T constructModel) {
     return new ValueProviderMediator<>(constructModel,
                                        () -> muleContext,
                                        () -> reflectionCache);
@@ -150,14 +160,14 @@ public class InternalDeclarationSession implements DeclarationSession {
         .orElse(NULL_SUPPLIER);
   }
 
-  private <T extends ComponentModel> ParameterValueResolver parameterValueResolver(ComponentElementDeclaration componentElementDeclaration,
+  private <T extends ParameterizedModel> ParameterValueResolver parameterValueResolver(ParameterizedElementDeclaration parameterizedElementDeclaration,
                                                                                    T model) {
     Map<String, Object> parametersMap = new HashMap<>();
 
     Map<String, ParameterGroupModel> parameterGroups =
         model.getParameterGroupModels().stream().collect(toMap(NamedObject::getName, identity()));
 
-    for (ParameterGroupElementDeclaration parameterGroupElement : componentElementDeclaration.getParameterGroups()) {
+    for (ParameterGroupElementDeclaration parameterGroupElement : parameterizedElementDeclaration.getParameterGroups()) {
       final String parameterGroupName = parameterGroupElement.getName();
       final ParameterGroupModel parameterGroupModel = parameterGroups.get(parameterGroupName);
       if (parameterGroupModel == null) {
@@ -172,7 +182,7 @@ public class InternalDeclarationSession implements DeclarationSession {
                                                                             parameterName, parameterGroupName)));
         parametersMap.put(parameterName,
                           extractValue(parameterElement.getValue(),
-                                       artifactHelper().getParameterClass(parameterModel, componentElementDeclaration)));
+                                       artifactHelper().getParameterClass(parameterModel, parameterizedElementDeclaration)));
       }
     }
 
@@ -180,7 +190,7 @@ public class InternalDeclarationSession implements DeclarationSession {
       final ResolverSet resolverSet =
           ParametersResolver.fromValues(parametersMap,
                                         muleContext,
-                                        false,
+                                        true,
                                         reflectionCache,
                                         expressionManager,
                                         model.getName())

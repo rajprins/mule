@@ -11,6 +11,7 @@ import org.mule.api.annotation.NoImplement;
 import org.mule.runtime.api.connection.ConnectionValidationResult;
 import org.mule.runtime.api.value.ValueResult;
 import org.mule.runtime.app.declaration.api.ComponentElementDeclaration;
+import org.mule.runtime.app.declaration.api.ParameterizedElementDeclaration;
 
 /**
  * It is in charge or resolving connector's operations and retrieving metadata for all
@@ -44,7 +45,7 @@ public interface DeclarationSession {
    * @param parameterName the name of the parameter for which to resolve the {@link org.mule.runtime.api.value.Value}s
    * @return a {@link ValueResult} with the accepted parameter values to use
    */
-  ValueResult getValues(ComponentElementDeclaration component, String parameterName);
+  ValueResult getValues(ParameterizedElementDeclaration parameterizedElementDeclaration, String parameterName);
 
   /**
    * Stops and disposes all resources used by this {@link DeclarationSession}

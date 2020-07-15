@@ -16,6 +16,9 @@ import static org.mule.test.infrastructure.maven.MavenTestUtils.getMavenLocalRep
 import org.mule.runtime.api.connection.ConnectionValidationResult;
 import org.mule.runtime.api.value.ValueResult;
 import org.mule.runtime.app.declaration.api.ComponentElementDeclaration;
+import org.mule.runtime.app.declaration.api.ConfigurationElementDeclaration;
+import org.mule.runtime.app.declaration.api.ConnectionElementDeclaration;
+import org.mule.runtime.app.declaration.api.ParameterizedElementDeclaration;
 import org.mule.runtime.app.declaration.api.fluent.ArtifactDeclarer;
 import org.mule.runtime.module.tooling.api.artifact.DeclarationSession;
 import org.mule.tck.junit4.rule.SystemProperty;
@@ -23,6 +26,7 @@ import org.mule.test.infrastructure.deployment.AbstractFakeMuleServerTestCase;
 
 import java.util.List;
 
+import org.junit.After;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -65,6 +69,25 @@ public class DeclarationSessionTestCase extends AbstractFakeMuleServerTestCase i
         .setArtifactDeclaration(artifactDeclarer.getDeclaration())
         .build();
     this.muleServer.start();
+  }
+
+  @After
+  public void disposeSession() {
+    if (session != null) {
+      session.dispose();
+    }
+  }
+
+  @Test
+  public void testStaticValuesAtConnectionParameter() {
+    ConnectionElementDeclaration connectionElementDeclaration = connectionDeclaration(CLIENT_NAME);
+    getResultAndValidate(connectionElementDeclaration, PROVIDED_PARAMETER_NAME, "WITH-ACTING-PARAMETER-" + CLIENT_NAME);
+  }
+
+  @Test
+  public void testStaticValuesAtConfigurationParameter() {
+    ConfigurationElementDeclaration configurationElementDeclaration = configurationDeclaration(CLIENT_NAME);
+    getResultAndValidate(configurationElementDeclaration, PROVIDED_PARAMETER_NAME, "WITH-ACTING-PARAMETER-" + CLIENT_NAME);
   }
 
   @Test
@@ -114,7 +137,7 @@ public class DeclarationSessionTestCase extends AbstractFakeMuleServerTestCase i
     getResultAndValidate(elementDeclaration, PROVIDED_PARAMETER_NAME, stringValue);
   }
 
-  private void getResultAndValidate(ComponentElementDeclaration elementDeclaration, String parameterName, String expectedValue) {
+  private void getResultAndValidate(ParameterizedElementDeclaration elementDeclaration, String parameterName, String expectedValue) {
     ValueResult providerResult = session.getValues(elementDeclaration, parameterName);
 
     assertThat(providerResult.isSuccess(), equalTo(true));
