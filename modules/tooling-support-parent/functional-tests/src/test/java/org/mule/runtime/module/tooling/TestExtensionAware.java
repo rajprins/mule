@@ -16,9 +16,12 @@ import org.mule.runtime.app.declaration.api.OperationElementDeclaration;
 import org.mule.runtime.app.declaration.api.ParameterValue;
 import org.mule.runtime.app.declaration.api.SourceElementDeclaration;
 import org.mule.runtime.app.declaration.api.fluent.ElementDeclarer;
+import org.mule.runtime.app.declaration.api.fluent.OperationElementDeclarer;
+import org.mule.runtime.app.declaration.api.fluent.ParameterGroupElementDeclarer;
 import org.mule.runtime.app.declaration.api.fluent.ParameterListValue;
 import org.mule.runtime.app.declaration.api.fluent.ParameterObjectValue;
 import org.mule.runtime.app.declaration.api.fluent.ParameterSimpleValue;
+import org.mule.runtime.app.declaration.api.fluent.SourceElementDeclarer;
 
 import java.util.List;
 
@@ -44,6 +47,10 @@ public interface TestExtensionAware {
   String ACTING_PARAMETER_GROUP_OP_ELEMENT_NAME = "actingParameterGroupOP";
   String NESTED_PARAMETERS_OP_ELEMENT_NAME = "nestedVPsOperation";
   String MULTIPLE_NESTED_PARAMETERS_OP_ELEMENT_NAME = "multipleNestedVPsOperation";
+
+  String MULTI_LEVEL_PARTIAL_TYPE_KEYS_METADATA_KEY_OP_ELEMENT_NAME = "multiLevelPartialTypeKeysMetadataKey";
+  String MULTI_LEVEL_SHOW_IN_DSL_GROUP_PARTIAL_TYPE_KEYS_METADATA_KEY_OP_ELEMENT_NAME =
+      "multiLevelShowInDslGroupPartialTypeKeysMetadataKey";
 
   String CONNECTION_CLIENT_NAME_PARAMETER = "clientName";
 
@@ -78,6 +85,42 @@ public interface TestExtensionAware {
         .withConfig(configName)
         .getDeclaration();
 
+  }
+
+  default OperationElementDeclaration multiLevelOPDeclaration(String configName, String continent, String country) {
+    OperationElementDeclarer elementDeclarer = TEST_EXTENSION_DECLARER
+        .newOperation(MULTI_LEVEL_PARTIAL_TYPE_KEYS_METADATA_KEY_OP_ELEMENT_NAME)
+        .withConfig(configName);
+    ParameterGroupElementDeclarer parameterGroupElementDeclarer = newParameterGroup("LocationKey");
+    if (continent != null) {
+      parameterGroupElementDeclarer.withParameter("continent", ParameterSimpleValue.of(continent));
+    }
+    if (country != null) {
+      parameterGroupElementDeclarer.withParameter("country", ParameterSimpleValue.of(country));
+    }
+
+    if (continent != null || country != null) {
+      elementDeclarer.withParameterGroup(parameterGroupElementDeclarer.getDeclaration());
+    }
+    return elementDeclarer.getDeclaration();
+  }
+
+  default OperationElementDeclaration multiLevelShowInDslGroupOPDeclaration(String configName, String continent, String country) {
+    OperationElementDeclarer elementDeclarer = TEST_EXTENSION_DECLARER
+        .newOperation(MULTI_LEVEL_SHOW_IN_DSL_GROUP_PARTIAL_TYPE_KEYS_METADATA_KEY_OP_ELEMENT_NAME)
+        .withConfig(configName);
+    ParameterGroupElementDeclarer parameterGroupElementDeclarer = newParameterGroup("LocationKeyShowInDsl");
+    if (continent != null) {
+      parameterGroupElementDeclarer.withParameter("continent", ParameterSimpleValue.of(continent));
+    }
+    if (country != null) {
+      parameterGroupElementDeclarer.withParameter("country", ParameterSimpleValue.of(country));
+    }
+
+    if (continent != null || country != null) {
+      elementDeclarer.withParameterGroup(parameterGroupElementDeclarer.getDeclaration());
+    }
+    return elementDeclarer.getDeclaration();
   }
 
   default OperationElementDeclaration actingParameterOPDeclaration(String configName, String actingParameter) {
@@ -140,18 +183,43 @@ public interface TestExtensionAware {
         .getDeclaration();
   }
 
+  default SourceElementDeclaration sourceDeclaration(String configName, String continentParameter,
+                                                     String countryParameter) {
+    return sourceDeclaration(configName, null, continentParameter, countryParameter);
+  }
 
   default SourceElementDeclaration sourceDeclaration(String configName, String actingParameter) {
-    return TEST_EXTENSION_DECLARER
+    return sourceDeclaration(configName, actingParameter, null, null);
+  }
+
+  default SourceElementDeclaration sourceDeclaration(String configName, String actingParameter, String continentParameter,
+                                                     String countryParameter) {
+    SourceElementDeclarer sourceElementDeclarer = TEST_EXTENSION_DECLARER
         .newSource(SOURCE_ELEMENT_NAME)
-        .withConfig(configName)
-        .withParameterGroup(newParameterGroup()
-            .withParameter(INDEPENDENT_SOURCE_PARAMETER_NAME, "")
-            .withParameter(CONNECTION_DEPENDANT_SOURCE_PARAMETER_NAME, "")
-            .withParameter(ACTING_PARAMETER_DEPENDANT_SOURCE_PARAMETER_NAME, "")
-            .withParameter(ACTING_PARAMETER_NAME, actingParameter)
-            .getDeclaration())
-        .getDeclaration();
+        .withConfig(configName);
+    if (actingParameter != null) {
+      sourceElementDeclarer
+          .withParameterGroup(newParameterGroup()
+              .withParameter(INDEPENDENT_SOURCE_PARAMETER_NAME, "")
+              .withParameter(CONNECTION_DEPENDANT_SOURCE_PARAMETER_NAME, "")
+              .withParameter(ACTING_PARAMETER_DEPENDANT_SOURCE_PARAMETER_NAME, "")
+              .withParameter(ACTING_PARAMETER_NAME, actingParameter)
+              .getDeclaration());
+    }
+
+    ParameterGroupElementDeclarer parameterGroupElementDeclarer = newParameterGroup("LocationKey");
+
+    if (continentParameter != null) {
+      parameterGroupElementDeclarer.withParameter("continent", ParameterSimpleValue.of(continentParameter));
+    }
+    if (countryParameter != null) {
+      parameterGroupElementDeclarer.withParameter("country", ParameterSimpleValue.of(countryParameter));
+    }
+    if (continentParameter != null || countryParameter != null) {
+      sourceElementDeclarer.withParameterGroup(parameterGroupElementDeclarer.getDeclaration());
+    }
+
+    return sourceElementDeclarer.getDeclaration();
   }
 
 }

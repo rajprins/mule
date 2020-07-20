@@ -15,7 +15,6 @@ import static org.mule.runtime.api.metadata.resolving.FailureCode.INVALID_METADA
 import static org.mule.runtime.api.metadata.resolving.MetadataFailure.Builder.newFailure;
 import static org.mule.runtime.api.metadata.resolving.MetadataResult.failure;
 import static org.mule.runtime.api.metadata.resolving.MetadataResult.success;
-
 import org.mule.runtime.api.meta.model.ComponentModel;
 import org.mule.runtime.api.meta.model.ComponentModelVisitor;
 import org.mule.runtime.api.meta.model.OutputModel;
@@ -57,12 +56,12 @@ import org.mule.runtime.extension.api.property.MetadataKeyPartModelProperty;
 import org.mule.runtime.module.extension.internal.runtime.resolver.ParameterValueResolver;
 import org.mule.runtime.module.extension.internal.util.ReflectionCache;
 
+import com.google.common.collect.ImmutableList;
+
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
-import com.google.common.collect.ImmutableList;
 
 /**
  * Resolves a Component's Metadata by coordinating the several moving parts that are affected by the Metadata fetching process, so
@@ -132,6 +131,13 @@ public final class MetadataMediator<T extends ComponentModel> {
     }
 
     return keysDelegate.getMetadataKeys(context, keyValueResult.get(), reflectionCache);
+  }
+
+  //TODO
+  public MetadataResult<MetadataKeysContainer> getMetadataKeys(MetadataContext context,
+                                                               Object partialKey,
+                                                               ReflectionCache reflectionCache) {
+    return keysDelegate.getMetadataKeys(context, partialKey, reflectionCache);
   }
 
   /**

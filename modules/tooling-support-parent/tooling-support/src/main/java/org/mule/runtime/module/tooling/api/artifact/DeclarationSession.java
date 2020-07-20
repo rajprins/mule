@@ -8,7 +8,13 @@ package org.mule.runtime.module.tooling.api.artifact;
 
 
 import org.mule.api.annotation.NoImplement;
+import org.mule.metadata.api.model.MetadataType;
+import org.mule.runtime.api.component.location.Location;
 import org.mule.runtime.api.connection.ConnectionValidationResult;
+import org.mule.runtime.api.metadata.MetadataKeyProvider;
+import org.mule.runtime.api.metadata.MetadataKeysContainer;
+import org.mule.runtime.api.metadata.resolving.MetadataResult;
+import org.mule.runtime.api.metadata.resolving.TypeKeysResolver;
 import org.mule.runtime.api.value.ValueResult;
 import org.mule.runtime.app.declaration.api.ComponentElementDeclaration;
 
@@ -28,14 +34,15 @@ public interface DeclarationSession {
 
   /**
    * Test connectivity for the connection associated to the configuration with the provided name.
-   * @param configName The name of the config for which to test connection.
    *
+   * @param configName The name of the config for which to test connection.
    * @return a {@link ConnectionValidationResult} with the result of the connectivity testing
    */
   ConnectionValidationResult testConnection(String configName);
 
   /**
    * Retrieve all {@link org.mule.runtime.api.value.Value} that can be configured for the given parameter.
+   *
    * @param component a {@link ComponentElementDeclaration} for the Component (Operation, Source, etc) from which
    *                  the available values can be used on the parameter {@param parameterName}. In case the value
    *                  provider requires any acting parameters to be able to resolve this values, those parameters
@@ -45,6 +52,26 @@ public interface DeclarationSession {
    * @return a {@link ValueResult} with the accepted parameter values to use
    */
   ValueResult getValues(ComponentElementDeclaration component, String parameterName);
+
+  /**
+   * Returns the list of types that can be described by the {@link TypeKeysResolver} associated to the {@link MetadataKeyProvider}
+   * Component identified by the {@link Location}.
+   *
+   * @param component the location of the {@link MetadataKeyProvider} component to query for its available keys.
+   * @return Successful {@link MetadataResult} if the keys are successfully resolved Failure {@link MetadataResult} if there is an
+   *         error while resolving the keys
+   */
+  MetadataResult<MetadataKeysContainer> getMetadataKeys(ComponentElementDeclaration component);
+
+  /**
+   * Returns the list of types that can be described by the {@link TypeKeysResolver} associated to the {@link MetadataKeyProvider}
+   * Component identified by the {@link Location}.
+   *
+   * @param component the location of the {@link MetadataKeyProvider} component to query for its available keys.
+   * @return Successful {@link MetadataResult} if the keys are successfully resolved Failure {@link MetadataResult} if there is an
+   *         error while resolving the keys
+   */
+  MetadataResult<MetadataType> outputMetadata(ComponentElementDeclaration component);
 
   /**
    * Stops and disposes all resources used by this {@link DeclarationSession}

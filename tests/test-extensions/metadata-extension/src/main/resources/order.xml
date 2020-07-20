@@ -4,8 +4,8 @@
     <shipto>
         <name>Mariano GonzaleSSSSS</name>
         <address>Calle falsa 123</address>
-        <city>Mordor</city>
-        <country>Peronia</country>
+        <cityKey>Mordor</cityKey>
+        <countryKey>Peronia</countryKey>
     </shipto>
     <item>
         <title>Esmalte</title>

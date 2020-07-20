@@ -25,7 +25,7 @@
     </flow>
 
     <flow name="sourceMetadataWithMultilevel" initialState="stopped">
-        <metadata:metadata-source-with-multilevel continent="AMERICA" country="ARGENTINA" city="BA"/>
+        <metadata:metadata-source-with-multilevel continentKey="AMERICA" countryKey="ARGENTINA" cityKey="BA"/>
         <logger/>
     </flow>
 
@@ -38,7 +38,7 @@
     </flow>
 
     <flow name="simpleMultiLevelKeyResolver">
-        <metadata:simple-multi-level-key-resolver config-ref="config" continent="AMERICA" country="USA" city="SFO"/>
+        <metadata:simple-multi-level-key-resolver config-ref="config" continentKey="AMERICA" countryKey="USA" cityKey="SFO"/>
     </flow>
 
     <flow name="queryWithExpression">

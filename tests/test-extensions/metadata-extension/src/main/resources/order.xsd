@@ -9,8 +9,8 @@
                         <xs:sequence>
                             <xs:element name="name" type="xs:string"/>
                             <xs:element name="address" type="xs:string"/>
-                            <xs:element name="city" type="xs:string"/>
-                            <xs:element name="country" type="xs:string"/>
+                            <xs:element name="cityKey" type="xs:string"/>
+                            <xs:element name="countryKey" type="xs:string"/>
                         </xs:sequence>
                     </xs:complexType>
                 </xs:element>

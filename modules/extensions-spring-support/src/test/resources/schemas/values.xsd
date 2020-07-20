@@ -347,9 +347,9 @@
           </xs:annotation>
         </xs:attribute>
         <xs:attribute type="xs:string" use="optional" default="some value" name="required"></xs:attribute>
-        <xs:attribute type="xs:string" use="optional" default="AMERICA" name="continent"></xs:attribute>
-        <xs:attribute type="xs:string" use="optional" default="USA" name="country"></xs:attribute>
-        <xs:attribute type="xs:string" use="optional" default="SFO" name="city"></xs:attribute>
+        <xs:attribute type="xs:string" use="optional" default="AMERICA" name="continentKey"></xs:attribute>
+        <xs:attribute type="xs:string" use="optional" default="USA" name="countryKey"></xs:attribute>
+        <xs:attribute type="xs:string" use="optional" default="SFO" name="cityKey"></xs:attribute>
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
@@ -451,9 +451,9 @@
       <xs:extension xmlns:mule="http://www.mulesoft.org/schema/mule/core" base="mule:abstractOperatorType">
         <xs:sequence minOccurs="0" maxOccurs="1"></xs:sequence>
         <xs:attribute type="mule:expressionString" use="optional" default="some value" name="required"></xs:attribute>
-        <xs:attribute type="mule:expressionString" use="optional" default="AMERICA" name="continent"></xs:attribute>
-        <xs:attribute type="mule:expressionString" use="optional" default="USA" name="country"></xs:attribute>
-        <xs:attribute type="mule:expressionString" use="optional" default="SFO" name="city"></xs:attribute>
+        <xs:attribute type="mule:expressionString" use="optional" default="AMERICA" name="continentKey"></xs:attribute>
+        <xs:attribute type="mule:expressionString" use="optional" default="USA" name="countryKey"></xs:attribute>
+        <xs:attribute type="mule:expressionString" use="optional" default="SFO" name="cityKey"></xs:attribute>
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>

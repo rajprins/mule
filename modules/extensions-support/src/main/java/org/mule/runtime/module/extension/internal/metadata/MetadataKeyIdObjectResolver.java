@@ -17,7 +17,6 @@ import static org.mule.runtime.api.metadata.resolving.FailureCode.INVALID_METADA
 import static org.mule.runtime.api.util.Preconditions.checkArgument;
 import static org.mule.runtime.extension.api.dsql.DsqlParser.isDsqlQuery;
 import static org.mule.runtime.module.extension.internal.util.IntrospectionUtils.getFieldValue;
-
 import org.mule.metadata.api.model.BooleanType;
 import org.mule.metadata.api.model.MetadataType;
 import org.mule.metadata.api.model.ObjectType;
@@ -54,7 +53,8 @@ import java.util.Optional;
  *
  * @since 4.0
  */
-final class MetadataKeyIdObjectResolver {
+//TODO
+public final class MetadataKeyIdObjectResolver {
 
   private static final DsqlParser dsqlParser = DsqlParser.getInstance();
   private final ComponentModel component;
@@ -65,6 +65,10 @@ final class MetadataKeyIdObjectResolver {
     checkArgument(component != null, "The ComponentModel cannot be null");
     this.component = component;
     this.keyParts = getMetadataKeyParts(component);
+  }
+
+  public Object resolveWithPartialKey(MetadataKey key) throws MetadataResolvingException {
+    return doResolve(key, true);
   }
 
   /**
@@ -79,6 +83,10 @@ final class MetadataKeyIdObjectResolver {
    *         </ul>
    */
   public Object resolve(MetadataKey key) throws MetadataResolvingException {
+    return doResolve(key, false);
+  }
+
+  private Object doResolve(MetadataKey key, boolean partial) throws MetadataResolvingException {
     if (isKeyLess()) {
       return NullMetadataKey.ID;
     }
@@ -88,7 +96,7 @@ final class MetadataKeyIdObjectResolver {
 
       @Override
       protected Map<Field, String> getFieldValuesMap() throws MetadataResolvingException {
-        return keyToFieldValueMap(key);
+        return keyToFieldValueMap(key, partial);
       }
     };
     type.accept(visitor);
@@ -202,21 +210,23 @@ final class MetadataKeyIdObjectResolver {
     }
   }
 
-  private Map<Field, String> keyToFieldValueMap(MetadataKey key) throws MetadataResolvingException {
+  private Map<Field, String> keyToFieldValueMap(MetadataKey key, boolean partial) throws MetadataResolvingException {
     final Map<String, Field> fieldParts = keyParts.stream()
         .filter(p -> p.getModelProperty(DeclaringMemberModelProperty.class).isPresent())
         .map(p -> p.getModelProperty(DeclaringMemberModelProperty.class).get().getDeclaringField())
         .collect(toMap(Field::getName, identity()));
 
     final Map<String, String> currentParts = getCurrentParts(key);
-    final List<String> missingParts = fieldParts.keySet()
-        .stream()
-        .filter(partName -> !currentParts.containsKey(partName))
-        .collect(toList());
+    if (!partial) {
+      final List<String> missingParts = fieldParts.keySet()
+              .stream()
+              .filter(partName -> !currentParts.containsKey(partName))
+              .collect(toList());
 
-    if (!missingParts.isEmpty()) {
-      throw buildException(format("The given MetadataKey does not provide all the required levels. Missing levels: %s",
-                                  missingParts));
+      if (!missingParts.isEmpty()) {
+        throw buildException(format("The given MetadataKey does not provide all the required levels. Missing levels: %s",
+                                    missingParts));
+      }
     }
 
     return currentParts.entrySet().stream().filter(keyEntry -> fieldParts.containsKey(keyEntry.getKey()))

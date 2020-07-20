@@ -12,8 +12,10 @@ import org.mule.tooling.extensions.metadata.internal.config.SimpleConfiguration;
 import org.mule.tooling.extensions.metadata.internal.connection.TstExtensionClient;
 import org.mule.tooling.extensions.metadata.internal.metadata.ConfigLessConnectionLessMetadataResolver;
 import org.mule.tooling.extensions.metadata.internal.metadata.ConfigLessMetadataResolver;
+import org.mule.tooling.extensions.metadata.internal.metadata.MultiLevelPartialTypeKeysOutputResolver;
 import org.mule.tooling.extensions.metadata.internal.parameters.ActingParameter;
 import org.mule.tooling.extensions.metadata.internal.parameters.ActingParameterGroup;
+import org.mule.tooling.extensions.metadata.internal.parameters.LocationKey;
 import org.mule.tooling.extensions.metadata.internal.value.ActingParameterGroupVP;
 import org.mule.tooling.extensions.metadata.internal.value.ActingParameterVP;
 import org.mule.tooling.extensions.metadata.internal.value.ComplexActingParameterVP;
@@ -38,6 +40,16 @@ public class SimpleOperations {
                                            @Connection TstExtensionClient client,
                                            @Optional @OfValues(ConfigLessNoActingParamVP.class) String providedParameter,
                                            @Optional @MetadataKeyId(ConfigLessMetadataResolver.class) String metadataKey) {
+    return null;
+  }
+
+  @OutputResolver(output = MultiLevelPartialTypeKeysOutputResolver.class)
+  public Result<String, Object> multiLevelPartialTypeKeysMetadataKey(@MetadataKeyId(MultiLevelPartialTypeKeysOutputResolver.class) @ParameterGroup(name="LocationKey") LocationKey locationKey) {
+    return null;
+  }
+
+  @OutputResolver(output = MultiLevelPartialTypeKeysOutputResolver.class)
+  public Result<String, Object> multiLevelShowInDslGroupPartialTypeKeysMetadataKey(@MetadataKeyId(MultiLevelPartialTypeKeysOutputResolver.class) @ParameterGroup(name="LocationKeyShowInDsl", showInDsl = true) LocationKey locationKeyShowInDslParam) {
     return null;
   }
 

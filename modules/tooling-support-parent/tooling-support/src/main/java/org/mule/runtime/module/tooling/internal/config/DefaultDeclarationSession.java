@@ -7,9 +7,12 @@
 package org.mule.runtime.module.tooling.internal.config;
 
 import static org.mule.runtime.api.i18n.I18nMessageFactory.createStaticMessage;
+import org.mule.metadata.api.model.MetadataType;
 import org.mule.runtime.api.connection.ConnectionValidationResult;
 import org.mule.runtime.api.exception.MuleException;
 import org.mule.runtime.api.exception.MuleRuntimeException;
+import org.mule.runtime.api.metadata.MetadataKeysContainer;
+import org.mule.runtime.api.metadata.resolving.MetadataResult;
 import org.mule.runtime.api.util.LazyValue;
 import org.mule.runtime.api.value.ValueResult;
 import org.mule.runtime.app.declaration.api.ComponentElementDeclaration;
@@ -64,6 +67,17 @@ public class DefaultDeclarationSession extends AbstractArtifactAgnosticService i
   public ValueResult getValues(ComponentElementDeclaration component, String parameterName) {
     return withInternalService().getValues(component, parameterName);
   }
+
+  @Override
+  public MetadataResult<MetadataKeysContainer> getMetadataKeys(ComponentElementDeclaration component) {
+    return withInternalService().getMetadataKeys(component);
+  }
+
+  @Override
+  public MetadataResult<MetadataType> outputMetadata(ComponentElementDeclaration component) {
+    return withInternalService().outputMetadata(component);
+  }
+
 
   @Override
   public void dispose() {

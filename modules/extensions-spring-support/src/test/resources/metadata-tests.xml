@@ -145,7 +145,7 @@
     </flow>
 
     <flow name="simpleMultiLevelKeyResolver">
-        <metadata:simple-multi-level-key-resolver config-ref="config" continent="AMERICA" country="USA" city="SFO"/>
+        <metadata:simple-multi-level-key-resolver config-ref="config" continentKey="AMERICA" countryKey="USA" cityKey="SFO"/>
     </flow>
 
     <flow name="emptyPartialMultilevelKeys">
@@ -153,19 +153,25 @@
     </flow>
 
     <flow name="partialMultiLevelKeyResolver">
-        <metadata:partial-multi-level-key-resolver config-ref="config" continent="AMERICA"/>
+        <metadata:partial-multi-level-key-resolver config-ref="config" continentKey="AMERICA"/>
+    </flow>
+
+    <flow name="partialMultiLevelKeyShowInDslResolver">
+        <metadata:partial-multi-level-key-show-in-dsl-resolver config-ref="config">
+            <metadata:key-show-in-dsl continentKey="AMERICA"/>
+        </metadata:partial-multi-level-key-show-in-dsl-resolver>
     </flow>
 
     <flow name="twoLevelPartialMultiLevelKeyResolver">
-        <metadata:partial-multi-level-key-resolver config-ref="config" continent="AMERICA" country="ARGENTINA"/>
+        <metadata:partial-multi-level-key-resolver config-ref="config" continentKey="AMERICA" countryKey="ARGENTINA"/>
     </flow>
 
     <flow name="incompleteMultiLevelKeyResolver">
-        <metadata:simple-multi-level-key-resolver config-ref="config" continent="AMERICA" country="USA"/>
+        <metadata:simple-multi-level-key-resolver config-ref="config" continentKey="AMERICA" countryKey="USA"/>
     </flow>
 
     <flow name="sourceMetadataWithMultilevel" initialState="stopped">
-        <metadata:metadata-source-with-multilevel continent="AMERICA" country="ARGENTINA" city="BA"/>
+        <metadata:metadata-source-with-multilevel continentKey="AMERICA" countryKey="ARGENTINA" cityKey="BA"/>
     </flow>
 
     <flow name="typeWithDeclaredSubtypesMetadata">
@@ -175,7 +181,7 @@
     </flow>
 
     <flow name="resolverWithDynamicConfig">
-        <metadata:simple-multi-level-key-resolver config-ref="dynamic-config" continent="AMERICA" country="USA" city="SFO"/>
+        <metadata:simple-multi-level-key-resolver config-ref="dynamic-config" continentKey="AMERICA" countryKey="USA" cityKey="SFO"/>
     </flow>
 
     <flow name="metadataKeyDefaultValue">
@@ -183,7 +189,7 @@
     </flow>
 
     <flow name="metadataKeyOptional">
-        <metadata:metadata-key-optional config-ref="config"/>
+        <metadata:metadata-key-optional config-ref="config" type="CAR"/>
     </flow>
 
     <flow name="multilevelMetadataKeyDefaultValue">

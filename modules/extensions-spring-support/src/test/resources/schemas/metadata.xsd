@@ -1063,9 +1063,9 @@
             <xs:documentation>The name of the configuration to be used to execute this component</xs:documentation>
           </xs:annotation>
         </xs:attribute>
-        <xs:attribute type="mule:expressionString" use="optional" name="continent"></xs:attribute>
-        <xs:attribute type="mule:expressionString" use="optional" name="country"></xs:attribute>
-        <xs:attribute type="mule:expressionString" use="optional" name="city"></xs:attribute>
+        <xs:attribute type="mule:expressionString" use="optional" name="continentKey"></xs:attribute>
+        <xs:attribute type="mule:expressionString" use="optional" name="countryKey"></xs:attribute>
+        <xs:attribute type="mule:expressionString" use="optional" name="cityKey"></xs:attribute>
         <xs:attribute type="xs:string" use="optional" name="target">
           <xs:annotation>
             <xs:documentation>The name of a variable on which the operation's output will be placed</xs:documentation>
@@ -1129,9 +1129,9 @@
             <xs:documentation>The name of the configuration to be used to execute this component</xs:documentation>
           </xs:annotation>
         </xs:attribute>
-        <xs:attribute type="mule:expressionString" use="optional" name="continent"></xs:attribute>
-        <xs:attribute type="mule:expressionString" use="optional" name="country"></xs:attribute>
-        <xs:attribute type="mule:expressionString" use="optional" name="city"></xs:attribute>
+        <xs:attribute type="mule:expressionString" use="optional" name="continentKey"></xs:attribute>
+        <xs:attribute type="mule:expressionString" use="optional" name="countryKey"></xs:attribute>
+        <xs:attribute type="mule:expressionString" use="optional" name="cityKey"></xs:attribute>
         <xs:attribute type="xs:string" use="optional" name="target">
           <xs:annotation>
             <xs:documentation>The name of a variable on which the operation's output will be placed</xs:documentation>
@@ -1157,9 +1157,9 @@
             <xs:documentation>Whether this source should only be executed on the primary node when runnning in Cluster</xs:documentation>
           </xs:annotation>
         </xs:attribute>
-        <xs:attribute type="xs:string" use="optional" name="continent"></xs:attribute>
-        <xs:attribute type="xs:string" use="optional" name="country"></xs:attribute>
-        <xs:attribute type="xs:string" use="optional" name="city"></xs:attribute>
+        <xs:attribute type="xs:string" use="optional" name="continentKey"></xs:attribute>
+        <xs:attribute type="xs:string" use="optional" name="countryKey"></xs:attribute>
+        <xs:attribute type="xs:string" use="optional" name="cityKey"></xs:attribute>
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>

@@ -10,15 +10,20 @@ package org.mule.tooling.extensions.metadata.internal.source;
 import org.mule.runtime.api.connection.ConnectionProvider;
 import org.mule.runtime.api.exception.MuleException;
 import org.mule.runtime.extension.api.annotation.Alias;
+import org.mule.runtime.extension.api.annotation.metadata.MetadataKeyId;
+import org.mule.runtime.extension.api.annotation.metadata.MetadataScope;
 import org.mule.runtime.extension.api.annotation.param.Config;
 import org.mule.runtime.extension.api.annotation.param.Connection;
 import org.mule.runtime.extension.api.annotation.param.MediaType;
 import org.mule.runtime.extension.api.annotation.param.Parameter;
+import org.mule.runtime.extension.api.annotation.param.ParameterGroup;
 import org.mule.runtime.extension.api.annotation.values.OfValues;
 import org.mule.runtime.extension.api.runtime.source.Source;
 import org.mule.runtime.extension.api.runtime.source.SourceCallback;
 import org.mule.tooling.extensions.metadata.internal.config.SimpleConfiguration;
 import org.mule.tooling.extensions.metadata.internal.connection.TstExtensionClient;
+import org.mule.tooling.extensions.metadata.internal.metadata.MultiLevelPartialTypeKeysOutputResolver;
+import org.mule.tooling.extensions.metadata.internal.parameters.LocationKey;
 import org.mule.tooling.extensions.metadata.internal.value.ActingParameterVP;
 import org.mule.tooling.extensions.metadata.internal.value.ConfigLessConnectionLessNoActingParamVP;
 import org.mule.tooling.extensions.metadata.internal.value.ConfigLessNoActingParamVP;
@@ -27,6 +32,7 @@ import java.io.Serializable;
 
 @Alias("simple")
 @MediaType(value = "text/plain")
+@MetadataScope(keysResolver = MultiLevelPartialTypeKeysOutputResolver.class, outputResolver = MultiLevelPartialTypeKeysOutputResolver.class)
 public class SimpleSource extends Source<String, Serializable> {
 
   @Config
@@ -50,6 +56,9 @@ public class SimpleSource extends Source<String, Serializable> {
   @OfValues(ActingParameterVP.class)
   public String actingParameterDependantParam;
 
+  @ParameterGroup(name="LocationKey")
+  @MetadataKeyId
+  public LocationKey locationKey;
 
   @Override
   public void onStart(SourceCallback<String, Serializable> sourceCallback) throws MuleException { }
