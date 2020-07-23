@@ -194,6 +194,11 @@ public interface TestExtensionAware {
 
   default SourceElementDeclaration sourceDeclaration(String configName, String actingParameter, String continentParameter,
                                                      String countryParameter) {
+    return sourceDeclaration(configName, actingParameter, continentParameter, countryParameter, null);
+  }
+
+  default SourceElementDeclaration sourceDeclaration(String configName, String actingParameter, String continentParameter,
+                                                     String countryParameter, String cityParameter) {
     SourceElementDeclarer sourceElementDeclarer = TEST_EXTENSION_DECLARER
         .newSource(SOURCE_ELEMENT_NAME)
         .withConfig(configName);
@@ -215,7 +220,10 @@ public interface TestExtensionAware {
     if (countryParameter != null) {
       parameterGroupElementDeclarer.withParameter("country", ParameterSimpleValue.of(countryParameter));
     }
-    if (continentParameter != null || countryParameter != null) {
+    if (cityParameter != null) {
+      parameterGroupElementDeclarer.withParameter("city", ParameterSimpleValue.of(cityParameter));
+    }
+    if (continentParameter != null || countryParameter != null || cityParameter != null) {
       sourceElementDeclarer.withParameterGroup(parameterGroupElementDeclarer.getDeclaration());
     }
 

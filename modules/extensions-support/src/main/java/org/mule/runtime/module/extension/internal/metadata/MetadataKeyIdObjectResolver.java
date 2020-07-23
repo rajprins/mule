@@ -53,8 +53,7 @@ import java.util.Optional;
  *
  * @since 4.0
  */
-//TODO
-public final class MetadataKeyIdObjectResolver {
+final class MetadataKeyIdObjectResolver {
 
   private static final DsqlParser dsqlParser = DsqlParser.getInstance();
   private final ComponentModel component;
@@ -67,6 +66,13 @@ public final class MetadataKeyIdObjectResolver {
     this.keyParts = getMetadataKeyParts(component);
   }
 
+  /**
+   * Given a partial {@link MetadataKey}, return the populated key in the Type that the component parameter requires.
+   *
+   * @param key the {@link MetadataKey} associated to the {@link MetadataKeyId}
+   * @return a new instance of the {@link MetadataKeyId} parameter {@code type} with the values of the passed {@link MetadataKey}
+   * @throws MetadataResolvingException if parameter types is not instantiable.
+   */
   public Object resolveWithPartialKey(MetadataKey key) throws MetadataResolvingException {
     return doResolve(key, true);
   }

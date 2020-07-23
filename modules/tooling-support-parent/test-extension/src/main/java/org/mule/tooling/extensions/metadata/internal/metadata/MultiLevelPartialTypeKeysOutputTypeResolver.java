@@ -4,19 +4,24 @@ import static java.util.Collections.emptySet;
 import static org.mule.metadata.api.model.MetadataFormat.JAVA;
 import static org.mule.runtime.api.metadata.MetadataKeyBuilder.newKey;
 import org.mule.metadata.api.builder.BaseTypeBuilder;
+import org.mule.metadata.api.builder.ObjectTypeBuilder;
 import org.mule.metadata.api.model.MetadataType;
 import org.mule.runtime.api.connection.ConnectionException;
 import org.mule.runtime.api.metadata.MetadataContext;
 import org.mule.runtime.api.metadata.MetadataKey;
 import org.mule.runtime.api.metadata.MetadataResolvingException;
+import org.mule.runtime.api.metadata.resolving.AttributesTypeResolver;
 import org.mule.runtime.api.metadata.resolving.FailureCode;
+import org.mule.runtime.api.metadata.resolving.InputTypeResolver;
 import org.mule.runtime.api.metadata.resolving.OutputTypeResolver;
 import org.mule.runtime.api.metadata.resolving.PartialTypeKeysResolver;
 import org.mule.tooling.extensions.metadata.internal.parameters.LocationKey;
+import org.mule.tooling.extensions.metadata.internal.source.StringAttributes;
 
 import java.util.Set;
 
-public class MultiLevelPartialTypeKeysOutputResolver implements PartialTypeKeysResolver<LocationKey>, OutputTypeResolver<LocationKey> {
+public class MultiLevelPartialTypeKeysOutputTypeResolver implements PartialTypeKeysResolver<LocationKey>, OutputTypeResolver<LocationKey>,
+        InputTypeResolver<LocationKey>, AttributesTypeResolver<LocationKey> {
   // continents
   public static final String AMERICA = "AMERICA";
   public static final String EUROPE = "EUROPE";
@@ -76,6 +81,18 @@ public class MultiLevelPartialTypeKeysOutputResolver implements PartialTypeKeysR
   @Override
   public MetadataType getOutputType(MetadataContext metadataContext, LocationKey locationKey) throws MetadataResolvingException, ConnectionException {
     return BaseTypeBuilder.create(JAVA).stringType().defaultValue(locationKey.toString()).build();
+  }
+
+  @Override
+  public MetadataType getInputMetadata(MetadataContext metadataContext, LocationKey locationKey) throws MetadataResolvingException, ConnectionException {
+    return BaseTypeBuilder.create(JAVA).stringType().defaultValue(locationKey.toString()).build();
+  }
+
+  @Override
+  public MetadataType getAttributesType(MetadataContext metadataContext, LocationKey locationKey) throws MetadataResolvingException, ConnectionException {
+    ObjectTypeBuilder objectTypeBuilder = BaseTypeBuilder.create(JAVA).objectType().id(StringAttributes.class.getName());
+    objectTypeBuilder.addField().key("value").value(BaseTypeBuilder.create(JAVA).stringType().defaultValue(locationKey.toString()).build()).build();
+    return objectTypeBuilder.build();
   }
 
   @Override

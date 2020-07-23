@@ -12,7 +12,7 @@ import org.mule.tooling.extensions.metadata.internal.config.SimpleConfiguration;
 import org.mule.tooling.extensions.metadata.internal.connection.TstExtensionClient;
 import org.mule.tooling.extensions.metadata.internal.metadata.ConfigLessConnectionLessMetadataResolver;
 import org.mule.tooling.extensions.metadata.internal.metadata.ConfigLessMetadataResolver;
-import org.mule.tooling.extensions.metadata.internal.metadata.MultiLevelPartialTypeKeysOutputResolver;
+import org.mule.tooling.extensions.metadata.internal.metadata.MultiLevelPartialTypeKeysOutputTypeResolver;
 import org.mule.tooling.extensions.metadata.internal.parameters.ActingParameter;
 import org.mule.tooling.extensions.metadata.internal.parameters.ActingParameterGroup;
 import org.mule.tooling.extensions.metadata.internal.parameters.LocationKey;
@@ -43,13 +43,13 @@ public class SimpleOperations {
     return null;
   }
 
-  @OutputResolver(output = MultiLevelPartialTypeKeysOutputResolver.class)
-  public Result<String, Object> multiLevelPartialTypeKeysMetadataKey(@MetadataKeyId(MultiLevelPartialTypeKeysOutputResolver.class) @ParameterGroup(name="LocationKey") LocationKey locationKey) {
+  @OutputResolver(output = MultiLevelPartialTypeKeysOutputTypeResolver.class)
+  public Result<String, Object> multiLevelPartialTypeKeysMetadataKey(@MetadataKeyId(MultiLevelPartialTypeKeysOutputTypeResolver.class) @ParameterGroup(name="LocationKey") LocationKey locationKey) {
     return null;
   }
 
-  @OutputResolver(output = MultiLevelPartialTypeKeysOutputResolver.class)
-  public Result<String, Object> multiLevelShowInDslGroupPartialTypeKeysMetadataKey(@MetadataKeyId(MultiLevelPartialTypeKeysOutputResolver.class) @ParameterGroup(name="LocationKeyShowInDsl", showInDsl = true) LocationKey locationKeyShowInDslParam) {
+  @OutputResolver(output = MultiLevelPartialTypeKeysOutputTypeResolver.class)
+  public Result<String, Object> multiLevelShowInDslGroupPartialTypeKeysMetadataKey(@MetadataKeyId(MultiLevelPartialTypeKeysOutputTypeResolver.class) @ParameterGroup(name="LocationKeyShowInDsl", showInDsl = true) LocationKey locationKeyShowInDslParam) {
     return null;
   }
 

@@ -8,7 +8,6 @@ package org.mule.runtime.config.api.dsl.model.metadata;
 
 import static java.util.Optional.empty;
 import static org.mule.runtime.internal.dsl.DslConstants.CONFIG_ATTRIBUTE_NAME;
-
 import org.mule.runtime.api.meta.NamedObject;
 import org.mule.runtime.api.meta.Typed;
 import org.mule.runtime.ast.api.ComponentAst;

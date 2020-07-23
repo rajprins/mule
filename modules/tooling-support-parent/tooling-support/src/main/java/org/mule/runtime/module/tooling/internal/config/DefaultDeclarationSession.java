@@ -74,10 +74,19 @@ public class DefaultDeclarationSession extends AbstractArtifactAgnosticService i
   }
 
   @Override
+  public MetadataResult<MetadataType> inputMetadata(ComponentElementDeclaration component, String parameterName) {
+    return withInternalService().inputMetadata(component, parameterName);
+  }
+
+  @Override
   public MetadataResult<MetadataType> outputMetadata(ComponentElementDeclaration component) {
     return withInternalService().outputMetadata(component);
   }
 
+  @Override
+  public MetadataResult<MetadataType> outputAttributesMetadata(ComponentElementDeclaration component) {
+    return withInternalService().outputAttributesMetadata(component);
+  }
 
   @Override
   public void dispose() {

@@ -6,7 +6,7 @@
  */
 package org.mule.runtime.module.tooling.internal.config;
 
-import static java.util.Collections.emptyMap;
+import static java.lang.String.format;
 import static java.util.Collections.emptySet;
 import static java.util.Comparator.comparingInt;
 import static java.util.Optional.ofNullable;
@@ -16,13 +16,12 @@ import static java.util.stream.Collectors.toMap;
 import static org.mule.runtime.api.connection.ConnectionValidationResult.failure;
 import static org.mule.runtime.api.i18n.I18nMessageFactory.createStaticMessage;
 import static org.mule.runtime.api.metadata.MetadataKeysContainerBuilder.getInstance;
+import static org.mule.runtime.api.metadata.resolving.FailureCode.COMPONENT_NOT_FOUND;
 import static org.mule.runtime.api.metadata.resolving.MetadataResult.success;
 import static org.mule.runtime.api.value.ResolvingFailure.Builder.newFailure;
 import static org.mule.runtime.api.value.ValueResult.resultFrom;
 import static org.mule.runtime.core.api.util.ClassUtils.withContextClassLoader;
-import static org.mule.runtime.core.internal.event.NullEventFactory.getNullEvent;
 import static org.mule.runtime.module.extension.internal.util.MuleExtensionUtils.getClassLoader;
-import static org.mule.runtime.module.tooling.internal.config.cache.NoOpMetadataCache.getNoOpCache;
 import static org.mule.runtime.module.tooling.internal.config.params.ParameterExtractor.extractValue;
 import org.mule.metadata.api.model.MetadataType;
 import org.mule.metadata.java.api.JavaTypeLoader;
@@ -31,15 +30,12 @@ import org.mule.runtime.api.connection.ConnectionValidationResult;
 import org.mule.runtime.api.exception.MuleRuntimeException;
 import org.mule.runtime.api.meta.NamedObject;
 import org.mule.runtime.api.meta.model.ComponentModel;
-import org.mule.runtime.api.meta.model.ExtensionModel;
-import org.mule.runtime.api.meta.model.HasOutputModel;
 import org.mule.runtime.api.meta.model.parameter.ParameterGroupModel;
 import org.mule.runtime.api.meta.model.parameter.ParameterModel;
 import org.mule.runtime.api.metadata.MetadataKey;
 import org.mule.runtime.api.metadata.MetadataKeyBuilder;
 import org.mule.runtime.api.metadata.MetadataKeysContainer;
-import org.mule.runtime.api.metadata.MetadataResolvingException;
-import org.mule.runtime.api.metadata.descriptor.ComponentMetadataDescriptor;
+import org.mule.runtime.api.metadata.descriptor.ParameterMetadataDescriptor;
 import org.mule.runtime.api.metadata.resolving.MetadataFailure;
 import org.mule.runtime.api.metadata.resolving.MetadataResult;
 import org.mule.runtime.api.util.LazyValue;
@@ -52,24 +48,19 @@ import org.mule.runtime.core.api.MuleContext;
 import org.mule.runtime.core.api.config.ConfigurationException;
 import org.mule.runtime.core.api.connector.ConnectionManager;
 import org.mule.runtime.core.api.el.ExpressionManager;
-import org.mule.runtime.core.api.event.CoreEvent;
 import org.mule.runtime.core.api.extension.ExtensionManager;
+import org.mule.runtime.core.internal.metadata.cache.DefaultMetadataCache;
 import org.mule.runtime.extension.api.metadata.NullMetadataKey;
 import org.mule.runtime.extension.api.metadata.NullMetadataResolver;
-import org.mule.runtime.extension.api.property.MetadataKeyIdModelProperty;
 import org.mule.runtime.extension.api.property.MetadataKeyPartModelProperty;
 import org.mule.runtime.extension.api.runtime.config.ConfigurationInstance;
 import org.mule.runtime.extension.api.values.ValueResolvingException;
-import org.mule.runtime.module.extension.api.runtime.privileged.EventedExecutionContext;
 import org.mule.runtime.module.extension.internal.metadata.DefaultMetadataContext;
-import org.mule.runtime.module.extension.internal.metadata.MetadataKeyIdObjectResolver;
 import org.mule.runtime.module.extension.internal.metadata.MetadataMediator;
 import org.mule.runtime.module.extension.internal.runtime.config.ResolverSetBasedParameterResolver;
-import org.mule.runtime.module.extension.internal.runtime.operation.OperationParameterValueResolver;
 import org.mule.runtime.module.extension.internal.runtime.resolver.ParameterValueResolver;
 import org.mule.runtime.module.extension.internal.runtime.resolver.ParametersResolver;
 import org.mule.runtime.module.extension.internal.runtime.resolver.ResolverSet;
-import org.mule.runtime.module.extension.internal.runtime.resolver.ValueResolver;
 import org.mule.runtime.module.extension.internal.util.ReflectionCache;
 import org.mule.runtime.module.extension.internal.value.ValueProviderMediator;
 import org.mule.runtime.module.tooling.api.artifact.DeclarationSession;
@@ -154,21 +145,34 @@ public class InternalDeclarationSession implements DeclarationSession {
         .map(cm -> {
           Optional<ConfigurationInstance> configurationInstance =
               ofNullable(component.getConfigRef()).flatMap(name -> artifactHelper().getConfigurationInstance(name));
-          MetadataKey metadataKey = buildMetadataKey(cm, component);
-          try {
-            ClassLoader extensionClassLoader = getClassLoader(artifactHelper().getExtensionModel(component));
-            Object resolve = metadataKey != null ?
-                             withContextClassLoader(extensionClassLoader, () -> new MetadataKeyIdObjectResolver(cm).resolveWithPartialKey(metadataKey), MetadataResolvingException.class, e -> new MuleRuntimeException(e))
-                     : null;
-            return resolveKeys(new MetadataMediator<>(cm), configurationInstance,
-                               resolve,
-                               extensionClassLoader);
-          } catch (MetadataResolvingException e) {
-            return MetadataResult.<MetadataKeysContainer>failure(MetadataFailure.Builder.newFailure(e).onKeys());
-          }
+          return resolveKeys(new MetadataMediator<>(cm), configurationInstance,
+                             buildMetadataKey(cm, component),
+                             getClassLoader(artifactHelper().getExtensionModel(component)));
         })
         .orElseGet(() -> success(getInstance()
             .add(NullMetadataResolver.NULL_RESOLVER_NAME, ImmutableSet.of(new NullMetadataKey())).build()));
+  }
+
+  @Override
+  public MetadataResult<MetadataType> inputMetadata(ComponentElementDeclaration component, String parameterName) {
+    return artifactHelper()
+            .findComponentModel(component)
+            .map(cm -> {
+              Optional<ConfigurationInstance> configurationInstance =
+                      ofNullable(component.getConfigRef()).flatMap(name -> artifactHelper().getConfigurationInstance(name));
+              MetadataKey metadataKey = buildMetadataKey(cm, component);
+              ClassLoader extensionClassLoader = getClassLoader(artifactHelper().getExtensionModel(component));
+              MetadataResult<ParameterMetadataDescriptor> parameterMetadataDescriptorMetadataResult = withContextClassLoader(extensionClassLoader, () ->
+                      new MetadataMediator<>(cm).getInputMetadata(createMetadataContext(configurationInstance, extensionClassLoader),
+                                                                  metadataKey, parameterName));
+              if (parameterMetadataDescriptorMetadataResult.isSuccess()) {
+                return MetadataResult.success(parameterMetadataDescriptorMetadataResult.get().getType());
+              }
+              return MetadataResult.<MetadataType>failure(parameterMetadataDescriptorMetadataResult.getFailures());
+            })
+            .orElseGet(() -> MetadataResult.failure(MetadataFailure.Builder.newFailure()
+                                                            .withMessage(format("Error resolving metadata input metadata for the [%s:%s] component on parameter: [%s]", component.getDeclaringExtension(), component.getName(), parameterName)).withFailureCode(COMPONENT_NOT_FOUND)
+                                                            .onComponent()));
   }
 
   @Override
@@ -178,135 +182,78 @@ public class InternalDeclarationSession implements DeclarationSession {
         .map(cm -> {
           Optional<ConfigurationInstance> configurationInstance =
               ofNullable(component.getConfigRef()).flatMap(name -> artifactHelper().getConfigurationInstance(name));
-          ParameterValueResolver parameterValueResolver = parameterMetadataValueResolver(component, cm, configurationInstance);
+
+          MetadataKey metadataKey = buildMetadataKey(cm, component);
           ClassLoader extensionClassLoader = getClassLoader(artifactHelper().getExtensionModel(component));
-          MetadataMediator<? extends ComponentModel> metadataMediator = new MetadataMediator<>(cm);
-          MetadataResult<? extends ComponentMetadataDescriptor<? extends ComponentModel>> metadata =
-              metadataMediator.getMetadata(new DefaultMetadataContext(() -> configurationInstance,
-                                                                      connectionManager,
-                                                                      getNoOpCache(),
-                                                                      new JavaTypeLoader(extensionClassLoader)),
-                                           parameterValueResolver, reflectionCache);
-          if (!metadata.isSuccess()) {
-            return MetadataResult.<MetadataType>failure(metadata.getFailures());
-          }
-          ComponentModel model = metadata.get().getModel();
-          // Check this before resolving!
-          if (model instanceof HasOutputModel) {
-            return MetadataResult.success(((HasOutputModel) model).getOutput().getType());
-          }
-          // TODO: improve error!
-          return MetadataResult.<MetadataType>failure(MetadataFailure.Builder.newFailure().onOutputPayload());
-
+          return withContextClassLoader(extensionClassLoader, () ->
+              new MetadataMediator<>(cm).getOutputMetadata(createMetadataContext(configurationInstance, extensionClassLoader),
+                                                                     metadataKey));
         })
-        .orElseGet(() -> MetadataResult.failure(MetadataFailure.Builder.newFailure().onOutputPayload()));
+        .orElseGet(() -> MetadataResult.failure(MetadataFailure.Builder.newFailure()
+                                                        .withMessage(format("Error resolving metadata output metadata for the [%s:%s] component", component.getDeclaringExtension(), component.getName())).withFailureCode(COMPONENT_NOT_FOUND)
+                                                        .onComponent()));
   }
 
-  private ParameterValueResolver parameterMetadataValueResolver(ComponentElementDeclaration componentElementDeclaration,
-                                                                ComponentModel componentModel,
-                                                                Optional<ConfigurationInstance> configurationInstance) {
-    // The same logic is applied for Source/Operation
-    return new OperationParameterValueResolver(new DeclarationExecutionContext(componentElementDeclaration, componentModel,
-                                                                               configurationInstance),
-                                               new EmptyResolverSet(muleContext), reflectionCache, expressionManager);
-  }
+  @Override
+  public MetadataResult<MetadataType> outputAttributesMetadata(ComponentElementDeclaration component) {
+    return artifactHelper()
+            .findComponentModel(component)
+            .map(cm -> {
+              Optional<ConfigurationInstance> configurationInstance =
+                      ofNullable(component.getConfigRef()).flatMap(name -> artifactHelper().getConfigurationInstance(name));
 
-  private class DeclarationExecutionContext implements EventedExecutionContext {
-
-    private ComponentElementDeclaration componentElementDeclaration;
-    private ComponentModel componentModel;
-    private Map<String, Object> parameters;
-    private Optional<ConfigurationInstance> configurationInstanceOptional;
-
-    public DeclarationExecutionContext(ComponentElementDeclaration componentElementDeclaration,
-                                       ComponentModel componentModel,
-                                       Optional<ConfigurationInstance> configurationInstanceOptional) {
-      this.componentElementDeclaration = componentElementDeclaration;
-      this.componentModel = componentModel;
-      this.parameters = getComponentElementDeclarationParameters(componentElementDeclaration, componentModel);
-      componentModel.getAllParameterModels().stream()
-          .filter(parameterModel -> !parameters.containsKey(parameterModel.getName()))
-          .forEach(parameterModel -> {
-            if (parameterModel.getDefaultValue() != null) {
-              parameters.put(parameterModel.getName(), parameterModel.getDefaultValue());
-            }
-          });
-
-      this.configurationInstanceOptional = configurationInstanceOptional;
-    }
-
-    @Override
-    public boolean hasParameter(String parameterName) {
-      return parameters.containsKey(parameterName);
-    }
-
-    @Override
-    public Map<String, Object> getParameters() {
-      return parameters;
-    }
-
-    @Override
-    public Optional<ConfigurationInstance> getConfiguration() {
-      return configurationInstanceOptional;
-    }
-
-    @Override
-    public ExtensionModel getExtensionModel() {
-      return artifactHelper().getExtensionModel(componentElementDeclaration);
-    }
-
-    @Override
-    public ComponentModel getComponentModel() {
-      return componentModel;
-    }
-
-    @Override
-    public Object getParameterOrDefault(String parameterName, Object defaultValue) {
-      return parameters.getOrDefault(parameterName, defaultValue);
-    }
-
-    @Override
-    public Object getParameter(String parameterName) {
-      return parameters.get(parameterName);
-    }
-
-    @Override
-    public CoreEvent getEvent() {
-      return getNullEvent();
-    }
-
-    @Override
-    public void changeEvent(CoreEvent updated) {}
+              MetadataKey metadataKey = buildMetadataKey(cm, component);
+              ClassLoader extensionClassLoader = getClassLoader(artifactHelper().getExtensionModel(component));
+              return withContextClassLoader(extensionClassLoader, () ->
+                      new MetadataMediator<>(cm).getOutputAttributesMetadata(createMetadataContext(configurationInstance, extensionClassLoader),
+                                                                   metadataKey));
+            })
+            .orElseGet(() -> MetadataResult.failure(MetadataFailure.Builder.newFailure()
+                                                            .withMessage(format("Error resolving metadata output metadata for the [%s:%s] component", component.getDeclaringExtension(), component.getName())).withFailureCode(COMPONENT_NOT_FOUND)
+                                                            .onComponent()));
   }
 
   private MetadataResult<MetadataKeysContainer> resolveKeys(MetadataMediator<ComponentModel> metadataMediator,
                                                             Optional<ConfigurationInstance> configurationInstance,
-                                                            Object partialKey,
+                                                            MetadataKey partialKey,
                                                             ClassLoader extensionClassLoader) {
-    return metadataMediator.getMetadataKeys(new DefaultMetadataContext(() -> configurationInstance,
-                                                                       connectionManager,
-                                                                       getNoOpCache(),
-                                                                       new JavaTypeLoader(extensionClassLoader)),
-                                            partialKey,
-                                            new ReflectionCache());
+    return withContextClassLoader(extensionClassLoader, () ->
+      metadataMediator.getMetadataKeys(createMetadataContext(configurationInstance, extensionClassLoader),
+                                       partialKey,
+                                       reflectionCache)
+    );
+  }
+
+  private DefaultMetadataContext createMetadataContext(Optional<ConfigurationInstance> configurationInstance, ClassLoader extensionClassLoader) {
+    return new DefaultMetadataContext(() -> configurationInstance,
+                                      connectionManager,
+                                      new DefaultMetadataCache(),
+                                      new JavaTypeLoader(extensionClassLoader));
   }
 
   private MetadataKey buildMetadataKey(ComponentModel componentModel, ComponentElementDeclaration elementDeclaration) {
-    if (!getMetadataKeyIdModelProperty(componentModel).isPresent()) {
-      return null;//TODO
+    List<ParameterModel> keyParts = getMetadataKeyParts(componentModel);
+
+    if (keyParts.isEmpty()) {
+      return MetadataKeyBuilder.newKey(NullMetadataKey.ID).build();
     }
 
+    MetadataKeyBuilder rootMetadataKeyBuilder = null;
     MetadataKeyBuilder metadataKeyBuilder = null;
-
     Map<String, Object> componentElementDeclarationParameters = getComponentElementDeclarationParameters(elementDeclaration, componentModel);
-    for (ParameterModel parameterModel : getMetadataKeyParts(componentModel)) {
-      String id = null;
+    for (ParameterModel parameterModel : keyParts) {
+      String id;
       if (componentElementDeclarationParameters.containsKey(parameterModel.getName())) {
         id = (String) componentElementDeclarationParameters.get(parameterModel.getName());
+      } else {
+        // It is only supported to defined parts in order
+        break;
       }
+
       if (id != null) {
         if (metadataKeyBuilder == null) {
           metadataKeyBuilder = MetadataKeyBuilder.newKey(id).withPartName(parameterModel.getName());
+          rootMetadataKeyBuilder = metadataKeyBuilder;
         }
         else {
           MetadataKeyBuilder metadataKeyChildBuilder = MetadataKeyBuilder.newKey(id).withPartName(parameterModel.getName());
@@ -316,11 +263,10 @@ public class InternalDeclarationSession implements DeclarationSession {
       }
     }
 
-    return metadataKeyBuilder == null ? null : metadataKeyBuilder.build();
-  }
-
-  private Optional<MetadataKeyIdModelProperty> getMetadataKeyIdModelProperty(ComponentModel componentModel) {
-    return componentModel.getModelProperty(MetadataKeyIdModelProperty.class);
+    if (metadataKeyBuilder == null) {
+      return MetadataKeyBuilder.newKey(NullMetadataKey.ID).build();
+    }
+    return rootMetadataKeyBuilder.build();
   }
 
   private List<ParameterModel> getMetadataKeyParts(ComponentModel componentModel) {
@@ -428,15 +374,4 @@ public class InternalDeclarationSession implements DeclarationSession {
     return parametersMap;
   }
 
-  private class EmptyResolverSet extends ResolverSet {
-
-    public EmptyResolverSet(MuleContext muleContext) {
-      super(muleContext);
-    }
-
-    @Override
-    public Map<String, ValueResolver<?>> getResolvers() {
-      return emptyMap();
-    }
-  }
 }

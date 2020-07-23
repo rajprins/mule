@@ -15,12 +15,15 @@ import static org.hamcrest.Matchers.is;
 import static org.mule.runtime.app.declaration.api.fluent.ElementDeclarer.newArtifact;
 import static org.mule.tck.junit4.matcher.MetadataKeyMatcher.metadataKeyWithId;
 import static org.mule.test.infrastructure.maven.MavenTestUtils.getMavenLocalRepository;
+import org.mule.metadata.api.model.MetadataType;
+import org.mule.metadata.internal.utils.MetadataTypeWriter;
 import org.mule.runtime.api.connection.ConnectionValidationResult;
 import org.mule.runtime.api.metadata.MetadataKey;
 import org.mule.runtime.api.metadata.MetadataKeysContainer;
 import org.mule.runtime.api.metadata.resolving.MetadataResult;
 import org.mule.runtime.api.value.ValueResult;
 import org.mule.runtime.app.declaration.api.ComponentElementDeclaration;
+import org.mule.runtime.app.declaration.api.SourceElementDeclaration;
 import org.mule.runtime.app.declaration.api.fluent.ArtifactDeclarer;
 import org.mule.runtime.module.tooling.api.artifact.DeclarationSession;
 import org.mule.tck.junit4.rule.SystemProperty;
@@ -165,6 +168,34 @@ public class DeclarationSessionTestCase extends AbstractFakeMuleServerTestCase i
     assertThat(countries, IsCollectionWithSize.hasSize(2));
     assertThat(countries, hasItem(metadataKeyWithId("USA").withDisplayName("United States").withPartName("country")));
     assertThat(countries, hasItem(metadataKeyWithId("ARGENTINA").withDisplayName("ARGENTINA").withPartName("country")));
+  }
+
+  @Test
+  public void outputMetadataSource() {
+    SourceElementDeclaration sourceElementDeclaration = sourceDeclaration(CONFIG_NAME, null, "America", "USA", "SFO");
+    MetadataResult<MetadataType> outputTypeMetadataResult = session.outputMetadata(sourceElementDeclaration);
+    assertThat(outputTypeMetadataResult.isSuccess(), is(true));
+    assertThat(new MetadataTypeWriter().toString(outputTypeMetadataResult.get()), equalTo("%type _:Java = @default(\"value\" : \"America|USA|SFO\") String"));
+  }
+
+  @Test
+  public void outputAttributesMetadataSource() {
+    SourceElementDeclaration sourceElementDeclaration = sourceDeclaration(CONFIG_NAME, null, "America", "USA", "SFO");
+    MetadataResult<MetadataType> outputTypeMetadataResult = session.outputAttributesMetadata(sourceElementDeclaration);
+    assertThat(outputTypeMetadataResult.isSuccess(), is(true));
+    assertThat(new MetadataTypeWriter().toString(outputTypeMetadataResult.get()),
+               equalTo("%type _:Java = @typeId(\"value\" : \"org.mule.tooling.extensions.metadata.internal.source.StringAttributes\") {\n" +
+            "  \"value\"? : @default(\"value\" : \"America|USA|SFO\") String\n" +
+            "}"));
+  }
+
+  @Test
+  public void inputSourceCallbackMetadataSource() {
+    SourceElementDeclaration sourceElementDeclaration = sourceDeclaration(CONFIG_NAME, null, "America", "USA", "SFO");
+    MetadataResult<MetadataType> outputTypeMetadataResult = session.inputMetadata(sourceElementDeclaration, "onSuccessParameter");
+    assertThat(outputTypeMetadataResult.isSuccess(), is(true));
+    assertThat(new MetadataTypeWriter().toString(outputTypeMetadataResult.get()),
+               equalTo("%type _:Java = @default(\"value\" : \"America|USA|SFO\") String"));
   }
 
   @Test

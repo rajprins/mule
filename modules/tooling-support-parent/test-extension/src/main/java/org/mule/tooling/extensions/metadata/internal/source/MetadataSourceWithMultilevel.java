@@ -12,13 +12,13 @@ import org.mule.runtime.extension.api.annotation.metadata.MetadataScope;
 import org.mule.runtime.extension.api.annotation.param.ParameterGroup;
 import org.mule.runtime.extension.api.runtime.source.Source;
 import org.mule.runtime.extension.api.runtime.source.SourceCallback;
-import org.mule.tooling.extensions.metadata.internal.metadata.MultiLevelPartialTypeKeysOutputResolver;
+import org.mule.tooling.extensions.metadata.internal.metadata.MultiLevelPartialTypeKeysOutputTypeResolver;
 import org.mule.tooling.extensions.metadata.internal.parameters.LocationKey;
 
 import java.util.Map;
 
-@MetadataScope(keysResolver = MultiLevelPartialTypeKeysOutputResolver.class,
-    outputResolver = MultiLevelPartialTypeKeysOutputResolver.class)
+@MetadataScope(keysResolver = MultiLevelPartialTypeKeysOutputTypeResolver.class,
+    outputResolver = MultiLevelPartialTypeKeysOutputTypeResolver.class)
 public class MetadataSourceWithMultilevel extends Source<Map<String, Object>, StringAttributes> {
 
   @MetadataKeyId

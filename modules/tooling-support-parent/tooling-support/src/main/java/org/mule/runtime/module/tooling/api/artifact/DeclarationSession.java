@@ -63,15 +63,11 @@ public interface DeclarationSession {
    */
   MetadataResult<MetadataKeysContainer> getMetadataKeys(ComponentElementDeclaration component);
 
-  /**
-   * Returns the list of types that can be described by the {@link TypeKeysResolver} associated to the {@link MetadataKeyProvider}
-   * Component identified by the {@link Location}.
-   *
-   * @param component the location of the {@link MetadataKeyProvider} component to query for its available keys.
-   * @return Successful {@link MetadataResult} if the keys are successfully resolved Failure {@link MetadataResult} if there is an
-   *         error while resolving the keys
-   */
+  MetadataResult<MetadataType> inputMetadata(ComponentElementDeclaration component, String parameterName);
+
   MetadataResult<MetadataType> outputMetadata(ComponentElementDeclaration component);
+
+  MetadataResult<MetadataType> outputAttributesMetadata(ComponentElementDeclaration component);
 
   /**
    * Stops and disposes all resources used by this {@link DeclarationSession}
