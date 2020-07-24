@@ -9,10 +9,13 @@ package org.mule.runtime.config.dsl.model;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.emptySet;
 import static java.util.Optional.empty;
+import static java.util.Optional.of;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mule.runtime.app.declaration.api.fluent.ElementDeclarer.forExtension;
@@ -20,7 +23,6 @@ import static org.mule.runtime.app.declaration.api.fluent.ElementDeclarer.newLis
 import static org.mule.runtime.app.declaration.api.fluent.ElementDeclarer.newParameterGroup;
 import static org.mule.runtime.core.api.extension.MuleExtensionModelProvider.MULE_NAME;
 import static org.mule.runtime.internal.dsl.DslConstants.FLOW_ELEMENT_IDENTIFIER;
-
 import org.mule.runtime.api.component.location.Location;
 import org.mule.runtime.api.meta.model.ExtensionModel;
 import org.mule.runtime.api.meta.model.XmlDslModel;
@@ -37,17 +39,18 @@ import org.mule.runtime.core.internal.locator.ComponentLocator;
 import org.mule.runtime.core.internal.metadata.cache.MetadataCacheId;
 import org.mule.runtime.core.internal.metadata.cache.MetadataCacheIdGenerator;
 
+import com.google.common.collect.ImmutableSet;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import io.qameta.allure.Issue;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableSet;
 
 public class ModelBasedTypeMetadataCacheKeyGeneratorTestCase extends AbstractDslModelTestCase {
 
@@ -192,6 +195,38 @@ public class ModelBasedTypeMetadataCacheKeyGeneratorTestCase extends AbstractDsl
     LOGGER.debug(otherKeyParts.toString());
 
     assertThat(keyParts, is(otherKeyParts));
+  }
+
+  @Test
+  @Issue("MULE-18601")
+  public void operationsWithDifferentInputTypeResolversShouldNotIncludeParametersNotRequiredForMetadata() throws Exception {
+    Map<String, String> parameterResolversNames = new HashMap<>();
+    parameterResolversNames.put(LIST_NAME, LIST_NAME);
+    parameterResolversNames.put(CONTENT_NAME, CONTENT_NAME);
+
+    mockTypeResolversInformationModelPropertyWithInputTypes(operation, "category", parameterResolversNames);
+    MetadataCacheId keyParts = getIdForComponentInputMetadata(getBaseApp(), OPERATION_LOCATION, CONTENT_NAME);
+    LOGGER.debug(keyParts.toString());
+
+    //TODO: 4.2/4.3 we got tagId plus model name instead of name from DSL plus model name. No need for both. Now we got (mockns:mock-operationmockOperation):(Input)
+    //assertThat(keyParts.getSourceElementName(), equalTo(of("(mockns:mockOperation):(Input)")));
+
+    assertThat(keyParts.getParts(), hasSize(4));
+    MetadataCacheId configurationCacheId = keyParts.getParts().stream()
+        .filter(part -> part.getSourceElementName().isPresent())
+        //TODO: This should be as it was in 4.2/4.3 (mockns:configuration[myConfig]) where myConfig is name and configuration the model name.
+        .filter(part -> part.getSourceElementName().get().equals("mockns:configuration-configconfiguration"))
+        .findFirst().orElseThrow(() -> new AssertionError("Coudn't find part for configuration element"));
+
+    assertThat(configurationCacheId.getParts(), hasSize(2));
+    assertThat(configurationCacheId.getParts().get(0).getSourceElementName(), equalTo(of("mockns:configuration-config")));
+
+    MetadataCacheId configurationPartCacheId = configurationCacheId.getParts().get(1);
+    assertThat(configurationPartCacheId.getSourceElementName(), equalTo(of("configuration")));
+    // It has 4 parameters but it should have only 2 as part of the hash, "mockns:connection" and "otherName". Same should happen when expanding the connection "mockns:connection"
+    // Due to issue MULE-17711 org.mule.runtime.config.api.dsl.model.metadata.ComponentAstBasedMetadataCacheIdGenerator#resolveGlobalElement
+    assertThat(configurationPartCacheId.getParts(), hasSize(2));
+    //TODO: add assertions for connection part...
   }
 
   @Test
