@@ -35,6 +35,8 @@ import org.mule.runtime.api.meta.model.parameter.ParameterModel;
 import org.mule.runtime.api.meta.model.parameter.ParameterizedModel;
 import org.mule.runtime.api.metadata.MetadataKey;
 import org.mule.runtime.api.metadata.MetadataKeyBuilder;
+import org.mule.runtime.api.metadata.MetadataKeysContainer;
+import org.mule.runtime.api.metadata.MetadataKeysContainerBuilder;
 import org.mule.runtime.api.metadata.descriptor.InputMetadataDescriptor;
 import org.mule.runtime.api.metadata.descriptor.OutputMetadataDescriptor;
 import org.mule.runtime.api.metadata.resolving.MetadataFailure;
@@ -54,6 +56,7 @@ import org.mule.runtime.core.api.extension.ExtensionManager;
 import org.mule.runtime.core.api.util.func.CheckedSupplier;
 import org.mule.runtime.core.internal.metadata.cache.DefaultMetadataCache;
 import org.mule.runtime.extension.api.metadata.NullMetadataKey;
+import org.mule.runtime.extension.api.metadata.NullMetadataResolver;
 import org.mule.runtime.extension.api.property.MetadataKeyPartModelProperty;
 import org.mule.runtime.extension.api.runtime.config.ConfigurationInstance;
 import org.mule.runtime.module.extension.internal.ExtensionResolvingContext;
@@ -69,6 +72,8 @@ import org.mule.runtime.module.tooling.api.artifact.DeclarationSession;
 import org.mule.runtime.module.tooling.api.metadata.ComponentMetadataTypes;
 import org.mule.runtime.module.tooling.internal.utils.ArtifactHelper;
 import org.mule.sdk.api.values.ValueResolvingException;
+
+import com.google.common.collect.ImmutableSet;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -133,6 +138,24 @@ public class InternalDeclarationSession implements DeclarationSession {
     } catch (Exception e) {
       return resultFrom(newFailure(e).build());
     }
+  }
+
+  @Override
+  public MetadataResult<MetadataKeysContainer> getMetadataKeys(ComponentElementDeclaration component) {
+    return artifactHelper()
+        .findComponentModel(component)
+        .map(cm -> {
+          Optional<ConfigurationInstance> configurationInstance =
+              ofNullable(component.getConfigRef()).flatMap(name -> artifactHelper().getConfigurationInstance(name));
+          MetadataKey metadataKey = buildMetadataKey(cm, component);
+          ClassLoader extensionClassLoader = getClassLoader(artifactHelper().getExtensionModel(component));
+          return withContextClassLoader(extensionClassLoader, () -> {
+            DefaultMetadataContext metadataContext = createMetadataContext(configurationInstance, extensionClassLoader);
+            return new MetadataMediator<>(cm).getMetadataKeys(metadataContext, metadataKey, new ReflectionCache());
+          });
+        })
+        .orElseGet(() -> MetadataResult.success(MetadataKeysContainerBuilder.getInstance()
+            .add(NullMetadataResolver.NULL_RESOLVER_NAME, ImmutableSet.of(new NullMetadataKey())).build()));
   }
 
   @Override
